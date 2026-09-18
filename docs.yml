@@ -1,0 +1,21 @@
+project: YukiWardrobe
+kind: unity-upm-package
+language: csharp
+description: >
+  VPM package: outfit switcher for VRChat avatars. A YukiWardrobe component
+  holds the configuration; an NDMF plugin generates the FX layer, parameters,
+  and menu at build time by emitting Modular Avatar components.
+source:
+  - Runtime/
+  - Editor/
+docs: docs/
+tests:
+  command: none
+  note: >
+    Compiles only inside a Unity 2022.3 project with the VRChat Avatars SDK,
+    NDMF (>=1.6), and Modular Avatar (>=1.10) installed. Tests would run there
+    via the Unity Test Framework; none exist yet.
+conventions:
+  runtime-deps: [VRChat Avatars SDK 3, NDMF, Modular Avatar]
+legacy:
+  - Wardrobe.cs (superseded, pending manual deletion)

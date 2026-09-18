@@ -1,0 +1,8 @@
+{
+    "name": "TsiYuki.Wardrobe",
+    "rootNamespace": "TsiYuki.Wardrobe",
+    "references": [
+        "VRC.SDKBase"
+    ],
+    "autoReferenced": true
+}

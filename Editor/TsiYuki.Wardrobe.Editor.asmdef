@@ -1,0 +1,15 @@
+{
+    "name": "TsiYuki.Wardrobe.Editor",
+    "rootNamespace": "TsiYuki.Wardrobe.Editor",
+    "references": [
+        "TsiYuki.Wardrobe",
+        "nadena.dev.ndmf",
+        "nadena.dev.modular-avatar.core",
+        "VRC.SDKBase",
+        "VRC.SDK3A"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": false
+}
