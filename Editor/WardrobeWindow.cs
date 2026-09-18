@@ -124,15 +124,18 @@ namespace TsiYuki.Wardrobe.Editor
 
         void OnGUI()
         {
-            YukiGUI.Header("Yuki Wardrobe", Version);
-
-            using (new EditorGUILayout.HorizontalScope())
+            using (new EditorGUILayout.VerticalScope(Padded))
             {
-                EditorGUI.BeginChangeCheck();
-                avatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(L["ui.avatar"], avatar, typeof(VRCAvatarDescriptor), true);
-                if (EditorGUI.EndChangeCheck()) { WardrobePreview.Stop(); OnChanged(); }
-                if (WardrobePreview.Active && GUILayout.Button(L["ui.stop_preview"], GUILayout.Width(120)))
-                    WardrobePreview.Stop();
+                YukiGUI.Header("Yuki Wardrobe", Version);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    GUILayout.Label(L["ui.avatar"], GUILayout.Width(LeftWidth - 12));
+                    EditorGUI.BeginChangeCheck();
+                    avatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(avatar, typeof(VRCAvatarDescriptor), true);
+                    if (EditorGUI.EndChangeCheck()) { WardrobePreview.Stop(); OnChanged(); }
+                    if (WardrobePreview.Active && GUILayout.Button(L["ui.stop_preview"], GUILayout.Width(110)))
+                        WardrobePreview.Stop();
+                }
             }
             if (avatar == null)
             {
@@ -159,22 +162,32 @@ namespace TsiYuki.Wardrobe.Editor
                 return;
             }
             var model = set?.For(config);
-            DrawBudget();
+            using (new EditorGUILayout.VerticalScope(Padded))
+                DrawBudget();
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUILayout.VerticalScope(GUILayout.Width(270)))
+                using (new EditorGUILayout.VerticalScope(GUILayout.Width(LeftWidth)))
                     DrawLeft(config, model);
-                GUILayout.Box(GUIContent.none, GUILayout.Width(1), GUILayout.ExpandHeight(true));
+                var line = GUILayoutUtility.GetRect(1, 1, GUILayout.Width(1), GUILayout.ExpandHeight(true));
+                EditorGUI.DrawRect(line, Divider);
                 using (new EditorGUILayout.VerticalScope())
                     DrawRight(config, model);
             }
         }
 
+        const float LeftWidth = 260;
+        static Color Divider => EditorGUIUtility.isProSkin ? new Color(0.1f, 0.1f, 0.1f) : new Color(0.6f, 0.6f, 0.6f);
+        static GUIStyle _padded, _content, _panelHeader, _cellLabel;
+        static GUIStyle CellLabel => _cellLabel ??= new GUIStyle(EditorStyles.label) { alignment = TextAnchor.MiddleLeft };
+        static GUIStyle Padded => _padded ??= new GUIStyle { padding = new RectOffset(8, 8, 4, 4) };
+        static GUIStyle Content => _content ??= new GUIStyle { padding = new RectOffset(10, 10, 8, 10) };
+        static GUIStyle PanelHeader => _panelHeader ??= new GUIStyle(EditorStyles.toolbar) { fixedHeight = 22 };
+
         void DrawWardrobeTabs()
         {
             var all = Wardrobes;
-            using (new EditorGUILayout.HorizontalScope())
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 for (int i = 0; i < all.Count; i++)
                 {
@@ -201,7 +214,8 @@ namespace TsiYuki.Wardrobe.Editor
         void DrawBudget()
         {
             var total = budget.Sum(u => u.Bits);
-            var rect = GUILayoutUtility.GetRect(0, 18, GUILayout.ExpandWidth(true));
+            GUILayout.Space(2);
+            var rect = GUILayoutUtility.GetRect(0, 16, GUILayout.ExpandWidth(true));
             EditorGUI.DrawRect(rect, EditorGUIUtility.isProSkin ? new Color(0.16f, 0.16f, 0.16f) : new Color(0.78f, 0.78f, 0.78f));
             float x = rect.x;
             int index = 0;
@@ -231,25 +245,26 @@ namespace TsiYuki.Wardrobe.Editor
 
         void DrawLeft(YukiWardrobe config, WardrobeModel model)
         {
-            leftScroll = EditorGUILayout.BeginScrollView(leftScroll);
+            using (new EditorGUILayout.HorizontalScope(PanelHeader))
+                GUILayout.Label(model != null ? model.MenuName : config.gameObject.name, EditorStyles.miniBoldLabel);
 
-            if (NavButton(L["ui.wardrobe_settings"], selected == SettingsIndex, EditorGUIUtility.IconContent("_Popup").image))
-                Select(SettingsIndex);
-
-            EnsureList(config, model);
-            list.DoLayoutList();
-
-            DrawDropArea(config);
-            if (!config.entries.Any(e => e != null && e.kind == EntryKind.None) && GUILayout.Button(new GUIContent(L["ui.add_none"], L["ui.none.tip"])))
+            // Vertical scrolling only; rows always fit the panel width.
+            leftScroll = GUILayout.BeginScrollView(leftScroll, false, false, GUIStyle.none, GUI.skin.verticalScrollbar);
+            using (new EditorGUILayout.VerticalScope(new GUIStyle { padding = new RectOffset(6, 6, 6, 6) }, GUILayout.Width(LeftWidth - 14)))
             {
-                WardrobeActions.AddNone(config);
-                Select(config.entries.Count - 1);
-                OnChanged();
+                if (NavButton(L["ui.wardrobe_settings"], selected == SettingsIndex, EditorGUIUtility.IconContent("_Popup").image))
+                    Select(SettingsIndex);
+                if (NavButton(L.Tr("ui.looks_n", config.looks.Count), selected == LooksIndex, EditorGUIUtility.IconContent("Favorite Icon").image))
+                    Select(LooksIndex);
+                GUILayout.Space(6);
+                GUILayout.Label(L["ui.outfits_header"], EditorStyles.miniLabel);
+
+                EnsureList(config, model);
+                list.DoLayoutList();
+
+                GUILayout.Space(8);
+                DrawDropArea(config);
             }
-
-            if (NavButton(L.Tr("ui.looks_n", config.looks.Count), selected == LooksIndex, EditorGUIUtility.IconContent("Favorite Icon").image))
-                Select(LooksIndex);
-
             EditorGUILayout.EndScrollView();
         }
 
@@ -273,10 +288,11 @@ namespace TsiYuki.Wardrobe.Editor
         {
             if (list != null && listOwner == config) { list.list = config.entries; return; }
             listOwner = config;
-            list = new ReorderableList(config.entries, typeof(WardrobeEntry), true, true, false, true)
+            list = new ReorderableList(config.entries, typeof(WardrobeEntry), true, false, false, false)
             {
                 elementHeight = 40,
-                drawHeaderCallback = rect => EditorGUI.LabelField(rect, L["ui.outfits_header"], EditorStyles.miniBoldLabel),
+                footerHeight = 0,
+                headerHeight = 0,
                 drawElementCallback = (rect, i, active, focused) => DrawEntryRow(rect, config, i),
                 onSelectCallback = l =>
                 {
@@ -340,12 +356,7 @@ namespace TsiYuki.Wardrobe.Editor
 
         void DrawDropArea(YukiWardrobe config)
         {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                GUILayout.Label(L["ui.category"], GUILayout.Width(60));
-                newCategory = EditorGUILayout.TextField(newCategory);
-            }
-            var rect = GUILayoutUtility.GetRect(0, 44, GUILayout.ExpandWidth(true));
+            var rect = GUILayoutUtility.GetRect(0, 48, GUILayout.ExpandWidth(true));
             GUI.Box(rect, L["ui.drop_here"], new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter, wordWrap = true });
             var e = Event.current;
             if ((e.type == EventType.DragUpdated || e.type == EventType.DragPerform) && rect.Contains(e.mousePosition))
@@ -361,11 +372,27 @@ namespace TsiYuki.Wardrobe.Editor
                 }
                 e.Use();
             }
-            if (GUILayout.Button(L["ui.add_selected"]))
+            GUILayout.Space(4);
+            var labelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 60;
+            newCategory = EditorGUILayout.TextField(new GUIContent(L["ui.category"], L["ui.category.tip"]), newCategory);
+            EditorGUIUtility.labelWidth = labelWidth;
+            GUILayout.Space(2);
+            using (new EditorGUILayout.HorizontalScope())
             {
-                foreach (var go in Selection.gameObjects)
-                    WardrobeActions.AddOutfit(config, avatar, go, newCategory);
-                OnChanged();
+                if (GUILayout.Button(L["ui.add_selected"]))
+                {
+                    foreach (var go in Selection.gameObjects)
+                        WardrobeActions.AddOutfit(config, avatar, go, newCategory);
+                    OnChanged();
+                }
+                using (new EditorGUI.DisabledScope(config.entries.Any(x => x != null && x.kind == EntryKind.None)))
+                    if (GUILayout.Button(new GUIContent(L["ui.add_none"], L["ui.none.tip"])))
+                    {
+                        WardrobeActions.AddNone(config);
+                        Select(config.entries.Count - 1);
+                        OnChanged();
+                    }
             }
         }
 
@@ -375,9 +402,18 @@ namespace TsiYuki.Wardrobe.Editor
         {
             var issueCount = (model?.Warnings.Count ?? 0) + conflicts.Count;
             var pages = new[] { L["ui.page.item"], L["ui.page.menu"], issueCount > 0 ? L.Tr("ui.page.issues_n", issueCount) : L["ui.page.issues"] };
-            page = (Page)GUILayout.Toolbar((int)page, pages, EditorStyles.toolbarButton);
+            using (new EditorGUILayout.HorizontalScope(PanelHeader))
+            {
+                for (int i = 0; i < pages.Length; i++)
+                    if (GUILayout.Toggle((int)page == i, pages[i], EditorStyles.toolbarButton, GUILayout.MinWidth(96)) && (int)page != i)
+                        page = (Page)i;
+                GUILayout.FlexibleSpace();
+            }
 
             rightScroll = EditorGUILayout.BeginScrollView(rightScroll);
+            EditorGUILayout.BeginVertical(Content);
+            var previousLabelWidth = EditorGUIUtility.labelWidth;
+            EditorGUIUtility.labelWidth = 120;
             switch (page)
             {
                 case Page.MenuPreview: DrawMenuPreview(config, model); break;
@@ -389,6 +425,8 @@ namespace TsiYuki.Wardrobe.Editor
                     else DrawSettings(config, model);
                     break;
             }
+            EditorGUIUtility.labelWidth = previousLabelWidth;
+            EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();
         }
 
@@ -396,7 +434,14 @@ namespace TsiYuki.Wardrobe.Editor
 
         void DrawSettings(YukiWardrobe config, WardrobeModel model)
         {
-            YukiGUI.Section(L["ui.wardrobe_settings"]);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label(L["ui.wardrobe_settings"], YukiGUI.TitleStyle);
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(L["ui.select_object"], GUILayout.Width(80)))
+                    EditorGUIUtility.PingObject(Selection.activeObject = config.gameObject);
+            }
+            GUILayout.Space(4);
             EditorGUI.BeginChangeCheck();
             var objectName = EditorGUILayout.DelayedTextField(new GUIContent(L["ui.object_name"], L["ui.object_name.tip"]), config.gameObject.name);
             var menuName = EditorGUILayout.TextField(new GUIContent(L["ui.menu_name"], L["ui.menu_name.tip"]), config.displayName);
@@ -439,10 +484,6 @@ namespace TsiYuki.Wardrobe.Editor
                 YukiGUI.Section(L["ui.summary"]);
                 EditorGUILayout.LabelField(L.Tr("ui.summary_text", model.Outfits.Count(), model.AllPieces.Count(), model.Looks.Count, model.TotalBits), YukiGUI.WrapMini);
             }
-
-            EditorGUILayout.Space(12);
-            if (GUILayout.Button(L["ui.select_object"], GUILayout.Width(200)))
-                EditorGUIUtility.PingObject(Selection.activeObject = config.gameObject);
         }
 
         string EntryName(WardrobeEntry e) =>
@@ -491,6 +532,18 @@ namespace TsiYuki.Wardrobe.Editor
                             }
                         if (entry.root != null && GUILayout.Button(L["ui.select_object"], GUILayout.Width(80)))
                             EditorGUIUtility.PingObject(Selection.activeObject = entry.root);
+                        GUILayout.FlexibleSpace();
+                        if (GUILayout.Button(new GUIContent(L["ui.remove"], L["ui.remove.tip"]), GUILayout.Width(70)))
+                        {
+                            UndoEdit.Begin(config, "Remove outfit");
+                            config.entries.Remove(entry);
+                            if (config.defaultEntry == entry.id) config.defaultEntry = "";
+                            UndoEdit.End(config);
+                            WardrobePreview.Stop();
+                            Select(SettingsIndex);
+                            OnChanged();
+                            GUIUtility.ExitGUI();
+                        }
                     }
                 }
             }
@@ -570,7 +623,14 @@ namespace TsiYuki.Wardrobe.Editor
         {
             if (entry.root == null) return;
             EditorGUILayout.LabelField(L["ui.pieces.help"], YukiGUI.WrapMini);
-            EditorGUILayout.Space(2);
+            EditorGUILayout.Space(4);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Label(L["ui.col.object"], EditorStyles.miniBoldLabel, GUILayout.Width(180));
+                GUILayout.Label(L["ui.col.name"], EditorStyles.miniBoldLabel);
+                GUILayout.Label(L["ui.col.icon"], EditorStyles.miniBoldLabel, GUILayout.Width(110));
+                GUILayout.Label(L["ui.col.default"], EditorStyles.miniBoldLabel, GUILayout.Width(60));
+            }
             foreach (Transform child in entry.root.transform)
             {
                 var go = child.gameObject;
@@ -600,7 +660,7 @@ namespace TsiYuki.Wardrobe.Editor
                             piece.icon = icon;
                             UndoEdit.End(config);
                         }
-                        GUILayout.Label(go.activeSelf ? L["ui.default_on"] : L["ui.default_off"], EditorStyles.miniLabel, GUILayout.Width(60));
+                        GUILayout.Label(go.activeSelf ? L["ui.on"] : L["ui.off"], CellLabel, GUILayout.Width(60), GUILayout.Height(EditorGUIUtility.singleLineHeight));
                     }
                 }
             }
