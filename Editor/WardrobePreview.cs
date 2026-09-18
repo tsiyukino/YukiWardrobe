@@ -15,9 +15,8 @@ namespace TsiYuki.Wardrobe.Editor
         static GameObject _avatar;
 
         public static YukiWardrobe Wardrobe { get; private set; }
-        public static GameObject Outfit { get; private set; } // null with IsNone
-        public static bool IsNone { get; private set; }
-        public static int Variant { get; private set; }
+        public static WardrobeEntry Entry { get; private set; }
+        public static int Color { get; private set; }
         public static bool Active => _avatar != null && AnimationMode.InAnimationMode();
 
         static WardrobePreview()
@@ -27,15 +26,14 @@ namespace TsiYuki.Wardrobe.Editor
             UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += (_, __) => Stop();
         }
 
-        public static void Show(Transform avatarRoot, YukiWardrobe config, GameObject outfitRoot, int variant = 0)
+        public static void Show(Transform avatarRoot, YukiWardrobe config, WardrobeEntry entry, int color = 0)
         {
             var model = WardrobeSet.Resolve(avatarRoot, WardrobeSet.IsMobileBuild).For(config);
-            if (model == null) return;
-            var outfit = model.Outfits.FirstOrDefault(o => o.Root == outfitRoot);
-            if (outfitRoot != null && outfit == null) return;
+            var outfit = model?.For(entry);
+            if (outfit == null) return;
 
             Stop();
-            var clip = BuildPose(model, outfit, variant);
+            var clip = BuildPose(model, outfit.IsNone ? null : outfit, color);
             AnimationMode.StartAnimationMode();
             AnimationMode.BeginSampling();
             Apply(avatarRoot, clip);
@@ -44,9 +42,8 @@ namespace TsiYuki.Wardrobe.Editor
             _clip = clip;
             _avatar = avatarRoot.gameObject;
             Wardrobe = config;
-            Outfit = outfitRoot;
-            IsNone = outfitRoot == null;
-            Variant = variant;
+            Entry = entry;
+            Color = color;
             SceneView.RepaintAll();
         }
 
@@ -58,13 +55,12 @@ namespace TsiYuki.Wardrobe.Editor
             _clip = null;
             _avatar = null;
             Wardrobe = null;
-            Outfit = null;
-            IsNone = false;
+            Entry = null;
             SceneView.RepaintAll();
         }
 
-        public static bool IsShowing(YukiWardrobe config, GameObject outfitRoot) =>
-            Active && Wardrobe == config && Outfit == outfitRoot;
+        public static bool IsShowing(YukiWardrobe config, WardrobeEntry entry) =>
+            Active && Wardrobe == config && Entry == entry;
 
         // Registers each property with AnimationMode (so it is restored on
         // Stop) and then sets it. Sampling the clip on the avatar root would
@@ -112,15 +108,15 @@ namespace TsiYuki.Wardrobe.Editor
             AnimationMode.AddPropertyModification(binding, new PropertyModification { target = target, propertyPath = path, value = value }, true);
 
         /// <summary>Outfit pose plus default piece states and the chosen variant.</summary>
-        internal static AnimationClip BuildPose(WardrobeModel model, ResolvedOutfit outfit, int variant)
+        internal static AnimationClip BuildPose(WardrobeModel model, ResolvedOutfit outfit, int color)
         {
             var clip = AnimatorBuilder.BuildOutfitClip(model, outfit);
             clip.hideFlags = HideFlags.HideAndDontSave;
-            foreach (var element in model.AllElements)
-                AnimatorBuilder.SetActiveCurve(clip, element.Path, element.DefaultOn);
-            if (outfit != null && outfit.Variants.Count > 0)
+            foreach (var piece in model.AllPieces)
+                AnimatorBuilder.SetActiveCurve(clip, piece.Path, piece.DefaultOn);
+            if (outfit != null && outfit.Colors.Count > 0)
             {
-                var chosen = outfit.Variants[Mathf.Clamp(variant, 0, outfit.Variants.Count - 1)];
+                var chosen = outfit.Colors[Mathf.Clamp(color, 0, outfit.Colors.Count - 1)];
                 foreach (var (path, type, slot, material) in chosen.Materials)
                     AnimationUtility.SetObjectReferenceCurve(clip,
                         EditorCurveBinding.PPtrCurve(path, type, $"m_Materials.Array.data[{slot}]"),

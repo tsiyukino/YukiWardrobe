@@ -30,6 +30,8 @@ namespace TsiYuki.Wardrobe.Editor
             var configs = ctx.AvatarRootObject.GetComponentsInChildren<YukiWardrobe>(true);
             if (configs.Length == 0) return;
 
+            // Build copies may never have been validated in the editor.
+            foreach (var config in configs) config.EnsureIds();
             var set = WardrobeSet.Resolve(ctx.AvatarRootTransform);
 
             foreach (var model in set.Models)
@@ -40,11 +42,11 @@ namespace TsiYuki.Wardrobe.Editor
 
             foreach (var model in set.Models)
             {
-                foreach (var outfit in model.Outfits.Where(o => o.MenuMode == OutfitMenuMode.Hide))
+                foreach (var outfit in model.Entries.Where(o => o.MenuMode == OutfitMenuMode.Hide))
                     foreach (var menu in outfit.Menus.Where(m => m.Installer != null))
                         Object.DestroyImmediate(menu.Installer);
 
-                if (model.Outfits.Count > 0)
+                if (model.Entries.Count > 0)
                     Generate(ctx, model);
 
                 // Outfits for the other platform are removed entirely.
@@ -101,20 +103,20 @@ namespace TsiYuki.Wardrobe.Editor
                 },
             };
 
-            foreach (var element in model.AllElements)
+            foreach (var piece in model.AllPieces)
                 list.Add(new ParameterConfig
                 {
-                    nameOrPrefix = element.ParameterName,
+                    nameOrPrefix = piece.ParameterName,
                     syncType = ParameterSyncType.Bool,
-                    defaultValue = element.DefaultOn ? 1 : 0,
+                    defaultValue = piece.DefaultOn ? 1 : 0,
                     hasExplicitDefaultValue = true,
                     saved = model.Saved,
                 });
 
-            foreach (var outfit in model.Outfits.Where(o => o.VariantParameter != null))
+            foreach (var outfit in model.Entries.Where(o => o.ColorParameter != null))
                 list.Add(new ParameterConfig
                 {
-                    nameOrPrefix = outfit.VariantParameter,
+                    nameOrPrefix = outfit.ColorParameter,
                     syncType = ParameterSyncType.Int,
                     defaultValue = 0,
                     hasExplicitDefaultValue = true,
@@ -132,7 +134,7 @@ namespace TsiYuki.Wardrobe.Editor
                     saved = false,
                 });
 
-            if (model.AllElements.Any())
+            if (model.AllPieces.Any())
                 list.Add(new ParameterConfig
                 {
                     nameOrPrefix = AnimatorBuilder.OneParameter,
@@ -160,13 +162,13 @@ namespace TsiYuki.Wardrobe.Editor
             var avatar = _component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avatar == null) yield break;
             var model = WardrobeSet.Resolve(avatar.transform).For(_component);
-            if (model == null || model.Outfits.Count == 0) yield break;
+            if (model == null || model.Entries.Count == 0) yield break;
 
             yield return Make(model.ParameterName, AnimatorControllerParameterType.Int, true, 0);
-            foreach (var e in model.AllElements)
+            foreach (var e in model.AllPieces)
                 yield return Make(e.ParameterName, AnimatorControllerParameterType.Bool, true, e.DefaultOn ? 1 : 0);
-            foreach (var o in model.Outfits.Where(o => o.VariantParameter != null))
-                yield return Make(o.VariantParameter, AnimatorControllerParameterType.Int, true, 0);
+            foreach (var o in model.Entries.Where(o => o.ColorParameter != null))
+                yield return Make(o.ColorParameter, AnimatorControllerParameterType.Int, true, 0);
             if (model.Looks.Count > 0)
                 yield return Make(model.LookParameter, AnimatorControllerParameterType.Int, false, 0);
         }

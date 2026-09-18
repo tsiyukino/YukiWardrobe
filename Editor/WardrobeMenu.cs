@@ -26,7 +26,7 @@ namespace TsiYuki.Wardrobe.Editor
             }
             var config = avatar.GetComponentInChildren<YukiWardrobe>(true) ?? WardrobeActions.CreateWardrobe(avatar, "Wardrobe");
             foreach (var go in objects.Where(o => o.GetComponentInParent<VRCAvatarDescriptor>() == avatar))
-                WardrobeActions.AddOutfit(config, avatar, go, "Default");
+                WardrobeActions.AddOutfit(config, avatar, go, "");
             WardrobeWindow.Open(config);
         }
 

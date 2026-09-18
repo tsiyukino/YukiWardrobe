@@ -28,7 +28,7 @@ namespace TsiYuki.Wardrobe.Editor
         [SerializeField] int selected = SettingsIndex;
         [SerializeField] OutfitTab tab;
         [SerializeField] Page page;
-        [SerializeField] string newCategory = "Default";
+        [SerializeField] string newCategory = "";
 
         Vector2 leftScroll, rightScroll;
         ReorderableList list;
@@ -178,7 +178,7 @@ namespace TsiYuki.Wardrobe.Editor
             {
                 for (int i = 0; i < all.Count; i++)
                 {
-                    var label = WardrobeModel.Fallback(all[i].menuName, all[i].gameObject.name);
+                    var label = WardrobeModel.Fallback(all[i].displayName, all[i].gameObject.name);
                     if (GUILayout.Toggle(i == wardrobeIndex, label, EditorStyles.toolbarButton, GUILayout.MinWidth(80)) && i != wardrobeIndex)
                     {
                         wardrobeIndex = i;
@@ -240,6 +240,12 @@ namespace TsiYuki.Wardrobe.Editor
             list.DoLayoutList();
 
             DrawDropArea(config);
+            if (!config.entries.Any(e => e != null && e.kind == EntryKind.None) && GUILayout.Button(new GUIContent(L["ui.add_none"], L["ui.none.tip"])))
+            {
+                WardrobeActions.AddNone(config);
+                Select(config.entries.Count - 1);
+                OnChanged();
+            }
 
             if (NavButton(L.Tr("ui.looks_n", config.looks.Count), selected == LooksIndex, EditorGUIUtility.IconContent("Favorite Icon").image))
                 Select(LooksIndex);
@@ -265,16 +271,16 @@ namespace TsiYuki.Wardrobe.Editor
 
         void EnsureList(YukiWardrobe config, WardrobeModel model)
         {
-            if (list != null && listOwner == config) { list.list = config.outfits; return; }
+            if (list != null && listOwner == config) { list.list = config.entries; return; }
             listOwner = config;
-            list = new ReorderableList(config.outfits, typeof(OutfitGroup), true, true, false, true)
+            list = new ReorderableList(config.entries, typeof(WardrobeEntry), true, true, false, true)
             {
                 elementHeight = 40,
                 drawHeaderCallback = rect => EditorGUI.LabelField(rect, L["ui.outfits_header"], EditorStyles.miniBoldLabel),
-                drawElementCallback = (rect, i, active, focused) => DrawOutfitRow(rect, config, i),
+                drawElementCallback = (rect, i, active, focused) => DrawEntryRow(rect, config, i),
                 onSelectCallback = l =>
                 {
-                    Undo.RegisterCompleteObjectUndo(config, "Reorder outfits");
+                    Undo.RegisterCompleteObjectUndo(config, "Reorder wardrobe");
                     Select(l.index);
                 },
                 onReorderCallbackWithDetails = (l, from, to) =>
@@ -284,47 +290,51 @@ namespace TsiYuki.Wardrobe.Editor
                 },
                 onRemoveCallback = l =>
                 {
-                    if (l.index < 0 || l.index >= config.outfits.Count) return;
+                    if (l.index < 0 || l.index >= config.entries.Count) return;
                     UndoEdit.Begin(config, "Remove outfit");
-                    config.outfits.RemoveAt(l.index);
+                    var removed = config.entries[l.index];
+                    config.entries.RemoveAt(l.index);
+                    if (removed != null && config.defaultEntry == removed.id) config.defaultEntry = "";
                     UndoEdit.End(config);
                     Select(SettingsIndex);
+                    OnChanged();
                 },
             };
         }
 
-        void DrawOutfitRow(Rect rect, YukiWardrobe config, int index)
+        void DrawEntryRow(Rect rect, YukiWardrobe config, int index)
         {
-            if (index >= config.outfits.Count) return;
-            var group = config.outfits[index];
-            var model = set?.For(config);
-            var resolved = model?.Outfits.FirstOrDefault(o => o.Source == group);
+            if (index >= config.entries.Count || config.entries[index] == null) return;
+            var entry = config.entries[index];
+            var resolved = set?.For(config)?.For(entry);
+            bool isNone = entry.kind == EntryKind.None;
 
             if (selected == index)
                 EditorGUI.DrawRect(new Rect(rect.x - 18, rect.y, rect.width + 22, rect.height), EditorGUIUtility.isProSkin ? new Color(0.24f, 0.37f, 0.59f, 0.35f) : new Color(0.6f, 0.75f, 1f, 0.35f));
 
             var iconRect = new Rect(rect.x, rect.y + 4, 32, 32);
-            var icon = group.icon != null ? (Texture)group.icon : EditorGUIUtility.IconContent("Prefab Icon").image;
+            var icon = entry.icon != null ? (Texture)entry.icon : EditorGUIUtility.IconContent(isNone ? "d_winbtn_win_close" : "Prefab Icon").image;
             GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
 
-            var name = group.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(group.displayName, group.root.name);
+            string name = isNone ? WardrobeModel.Fallback(entry.displayName, L["menu.none"])
+                : entry.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(entry.displayName, entry.root.name);
             GUI.Label(new Rect(iconRect.xMax + 6, rect.y + 3, rect.width - 80, 18), name, EditorStyles.boldLabel);
 
             var badges = new List<string>();
-            if (index == 0) badges.Add(L["ui.badge.default"]);
-            if (!string.IsNullOrWhiteSpace(group.category) && group.category != "Default") badges.Add(group.category);
-            if (group.toggleablePieces.Count > 0) badges.Add(L.Tr("ui.badge.pieces", group.toggleablePieces.Count));
+            if (config.DefaultEntry == entry) badges.Add(L["ui.badge.default"]);
+            if (!string.IsNullOrWhiteSpace(entry.category)) badges.Add(entry.category.Trim());
+            if (entry.pieces.Count > 0) badges.Add(L.Tr("ui.badge.pieces", entry.pieces.Count));
             if (resolved != null && resolved.Menus.Count > 0) badges.Add(L.Tr("ui.badge.menus", resolved.Menus.Count));
-            if (group.variants.Count > 1) badges.Add(L.Tr("ui.badge.variants", group.variants.Count));
-            if (group.platform != OutfitPlatform.All) badges.Add(L["ui.platform." + group.platform]);
+            if (entry.colors.Count > 1) badges.Add(L.Tr("ui.badge.variants", entry.colors.Count));
+            if (entry.platform != OutfitPlatform.All) badges.Add(L["ui.platform." + entry.platform]);
             GUI.Label(new Rect(iconRect.xMax + 6, rect.y + 21, rect.width - 80, 16), string.Join(" · ", badges), EditorStyles.miniLabel);
 
-            var showing = WardrobePreview.IsShowing(config, group.root);
+            var showing = WardrobePreview.IsShowing(config, entry);
             var tryRect = new Rect(rect.xMax - 34, rect.y + 9, 32, 22);
-            if (group.root != null && GUI.Button(tryRect, new GUIContent(showing ? "■" : "▶", L["ui.try_on.tip"]), EditorStyles.miniButton))
+            if ((isNone || entry.root != null) && GUI.Button(tryRect, new GUIContent(showing ? "■" : "▶", L["ui.try_on.tip"]), EditorStyles.miniButton))
             {
                 if (showing) WardrobePreview.Stop();
-                else WardrobePreview.Show(avatar.transform, config, group.root);
+                else WardrobePreview.Show(avatar.transform, config, entry);
             }
         }
 
@@ -346,7 +356,7 @@ namespace TsiYuki.Wardrobe.Editor
                     DragAndDrop.AcceptDrag();
                     foreach (var go in DragAndDrop.objectReferences.OfType<GameObject>())
                         WardrobeActions.AddOutfit(config, avatar, go, newCategory);
-                    Select(config.outfits.Count - 1);
+                    Select(config.entries.Count - 1);
                     OnChanged();
                 }
                 e.Use();
@@ -375,7 +385,7 @@ namespace TsiYuki.Wardrobe.Editor
                 default:
                     if (selected == SettingsIndex) DrawSettings(config, model);
                     else if (selected == LooksIndex) DrawLooks(config, model);
-                    else if (selected >= 0 && selected < config.outfits.Count) DrawOutfit(config, model, config.outfits[selected]);
+                    else if (selected >= 0 && selected < config.entries.Count && config.entries[selected] != null) DrawOutfit(config, model, config.entries[selected]);
                     else DrawSettings(config, model);
                     break;
             }
@@ -389,21 +399,16 @@ namespace TsiYuki.Wardrobe.Editor
             YukiGUI.Section(L["ui.wardrobe_settings"]);
             EditorGUI.BeginChangeCheck();
             var objectName = EditorGUILayout.DelayedTextField(new GUIContent(L["ui.object_name"], L["ui.object_name.tip"]), config.gameObject.name);
-            var menuName = EditorGUILayout.TextField(new GUIContent(L["ui.menu_name"], L["ui.menu_name.tip"]), config.menuName);
-            var menuIcon = (Texture2D)EditorGUILayout.ObjectField(L["ui.icon"], config.menuIcon, typeof(Texture2D), false, IconHeight);
+            var menuName = EditorGUILayout.TextField(new GUIContent(L["ui.menu_name"], L["ui.menu_name.tip"]), config.displayName);
+            var menuIcon = (Texture2D)EditorGUILayout.ObjectField(L["ui.icon"], config.icon, typeof(Texture2D), false, IconHeight);
             var parameter = EditorGUILayout.TextField(new GUIContent(L["ui.parameter"], L["ui.parameter.tip"]), config.parameterName);
             if (string.IsNullOrWhiteSpace(config.parameterName) && model != null)
                 EditorGUILayout.LabelField(" ", L.Tr("ui.parameter_auto", model.ParameterName), EditorStyles.miniLabel);
             var saved = EditorGUILayout.Toggle(new GUIContent(L["ui.saved"], L["ui.saved.tip"]), config.saved);
-            var none = EditorGUILayout.Toggle(new GUIContent(L["ui.none"], L["ui.none.tip"]), config.includeNone);
-            string noneLabel = config.noneLabel; Texture2D noneIcon = config.noneIcon;
-            if (none)
-            {
-                EditorGUI.indentLevel++;
-                noneLabel = EditorGUILayout.TextField(L["ui.none_label"], config.noneLabel);
-                noneIcon = (Texture2D)EditorGUILayout.ObjectField(L["ui.icon"], config.noneIcon, typeof(Texture2D), false, IconHeight);
-                EditorGUI.indentLevel--;
-            }
+
+            var entries = config.entries.Where(e => e != null && (e.kind == EntryKind.None || e.root != null)).ToList();
+            var names = entries.Select(EntryName).ToArray();
+            var defaultIndex = EditorGUILayout.Popup(new GUIContent(L["ui.default_entry"], L["ui.default_entry.tip"]), Mathf.Max(0, entries.IndexOf(config.DefaultEntry)), names);
 
             YukiGUI.Section(L["ui.effect"]);
             EditorGUILayout.LabelField(L["ui.effect.help"], YukiGUI.WrapMini);
@@ -418,13 +423,11 @@ namespace TsiYuki.Wardrobe.Editor
                     config.gameObject.name = objectName.Trim();
                 }
                 UndoEdit.Begin(config, "Edit wardrobe settings");
-                config.menuName = menuName;
-                config.menuIcon = menuIcon;
+                config.displayName = menuName;
+                config.icon = menuIcon;
                 config.parameterName = parameter;
                 config.saved = saved;
-                config.includeNone = none;
-                config.noneLabel = noneLabel;
-                config.noneIcon = noneIcon;
+                if (defaultIndex >= 0 && defaultIndex < entries.Count) config.defaultEntry = entries[defaultIndex].id;
                 config.changeEffect = effect;
                 config.changeEffectDuration = duration;
                 UndoEdit.End(config);
@@ -434,7 +437,7 @@ namespace TsiYuki.Wardrobe.Editor
             if (model != null)
             {
                 YukiGUI.Section(L["ui.summary"]);
-                EditorGUILayout.LabelField(L.Tr("ui.summary_text", model.Outfits.Count, model.AllElements.Count(), model.Looks.Count, model.TotalBits), YukiGUI.WrapMini);
+                EditorGUILayout.LabelField(L.Tr("ui.summary_text", model.Outfits.Count(), model.AllPieces.Count(), model.Looks.Count, model.TotalBits), YukiGUI.WrapMini);
             }
 
             EditorGUILayout.Space(12);
@@ -442,133 +445,159 @@ namespace TsiYuki.Wardrobe.Editor
                 EditorGUIUtility.PingObject(Selection.activeObject = config.gameObject);
         }
 
+        string EntryName(WardrobeEntry e) =>
+            e.kind == EntryKind.None ? WardrobeModel.Fallback(e.displayName, L["menu.none"])
+            : e.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(e.displayName, e.root.name);
+
         // ------------------------------------------------------------ outfit
 
-        void DrawOutfit(YukiWardrobe config, WardrobeModel model, OutfitGroup group)
+        void DrawOutfit(YukiWardrobe config, WardrobeModel model, WardrobeEntry entry)
         {
-            var resolved = model?.Outfits.FirstOrDefault(o => o.Source == group);
+            var resolved = model?.For(entry);
+            bool isNone = entry.kind == EntryKind.None;
             using (new EditorGUILayout.HorizontalScope())
             {
-                var icon = group.icon != null ? (Texture)group.icon : EditorGUIUtility.IconContent("Prefab Icon").image;
+                var icon = entry.icon != null ? (Texture)entry.icon : EditorGUIUtility.IconContent(isNone ? "d_winbtn_win_close" : "Prefab Icon").image;
                 GUILayout.Label(icon, GUILayout.Width(48), GUILayout.Height(48));
                 using (new EditorGUILayout.VerticalScope())
                 {
-                    GUILayout.Label(group.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(group.displayName, group.root.name), YukiGUI.TitleStyle);
+                    GUILayout.Label(EntryName(entry), YukiGUI.TitleStyle);
                     using (new EditorGUILayout.HorizontalScope())
                     {
-                        var showing = WardrobePreview.IsShowing(config, group.root);
-                        if (group.root != null && GUILayout.Button(showing ? L["ui.stop_preview"] : L["ui.try_on"], GUILayout.Width(110)))
+                        var showing = WardrobePreview.IsShowing(config, entry);
+                        if (resolved != null && GUILayout.Button(showing ? L["ui.stop_preview"] : L["ui.try_on"], GUILayout.Width(110)))
                         {
                             if (showing) WardrobePreview.Stop();
-                            else WardrobePreview.Show(avatar.transform, config, group.root);
+                            else WardrobePreview.Show(avatar.transform, config, entry);
                         }
-                        if (resolved != null && GUILayout.Button(L["ui.make_icon"], GUILayout.Width(110)))
+                        if (resolved != null && !isNone && GUILayout.Button(L["ui.make_icon"], GUILayout.Width(110)))
                         {
                             WardrobePreview.Stop();
                             var tex = WardrobeIcons.Capture(avatar.transform, model, resolved);
                             if (tex != null)
                             {
                                 UndoEdit.Begin(config, "Outfit icon");
-                                group.icon = tex;
+                                entry.icon = tex;
                                 UndoEdit.End(config);
                             }
                         }
-                        if (group.root != null && GUILayout.Button(L["ui.select_object"], GUILayout.Width(110)))
-                            EditorGUIUtility.PingObject(Selection.activeObject = group.root);
+                        using (new EditorGUI.DisabledScope(config.DefaultEntry == entry))
+                            if (GUILayout.Button(config.DefaultEntry == entry ? L["ui.badge.default"] : L["ui.set_default"], GUILayout.Width(110)))
+                            {
+                                UndoEdit.Begin(config, "Set default outfit");
+                                config.defaultEntry = entry.id;
+                                UndoEdit.End(config);
+                                OnChanged();
+                            }
+                        if (entry.root != null && GUILayout.Button(L["ui.select_object"], GUILayout.Width(80)))
+                            EditorGUIUtility.PingObject(Selection.activeObject = entry.root);
                     }
                 }
             }
 
-            var tabs = System.Enum.GetValues(typeof(OutfitTab)).Cast<OutfitTab>().Select(t => new GUIContent(TabLabel(t, group, resolved))).ToArray();
+            if (isNone)
+            {
+                DrawGeneral(config, entry);
+                return;
+            }
+
+            var tabs = System.Enum.GetValues(typeof(OutfitTab)).Cast<OutfitTab>().Select(t => new GUIContent(TabLabel(t, entry, resolved))).ToArray();
             tab = (OutfitTab)GUILayout.Toolbar((int)tab, tabs);
             EditorGUILayout.Space(4);
 
             switch (tab)
             {
-                case OutfitTab.General: DrawGeneral(config, group); break;
-                case OutfitTab.Pieces: DrawPieces(config, group); break;
-                case OutfitTab.Body: DrawBody(config, group, model); break;
-                case OutfitTab.Objects: DrawObjects(config, group); break;
-                case OutfitTab.Menus: DrawMenus(config, group, resolved); break;
-                case OutfitTab.Variants: DrawVariants(config, group); break;
+                case OutfitTab.General: DrawGeneral(config, entry); break;
+                case OutfitTab.Pieces: DrawPieces(config, entry); break;
+                case OutfitTab.Body: DrawBody(config, entry, model); break;
+                case OutfitTab.Objects: DrawObjects(config, entry); break;
+                case OutfitTab.Menus: DrawMenus(config, entry, resolved); break;
+                case OutfitTab.Variants: DrawColors(config, entry); break;
             }
         }
 
-        string TabLabel(OutfitTab t, OutfitGroup g, ResolvedOutfit r)
+        string TabLabel(OutfitTab t, WardrobeEntry g, ResolvedOutfit r)
         {
             var label = L["ui.tab." + t];
             int n = 0;
             switch (t)
             {
-                case OutfitTab.Pieces: n = g.toggleablePieces.Count; break;
+                case OutfitTab.Pieces: n = g.pieces.Count; break;
                 case OutfitTab.Body: n = g.blendshapes.Count; break;
                 case OutfitTab.Objects: n = g.objectOverrides.Count; break;
                 case OutfitTab.Menus: n = r?.Menus.Count ?? 0; break;
-                case OutfitTab.Variants: n = g.variants.Count; break;
+                case OutfitTab.Variants: n = g.colors.Count; break;
             }
             return n > 0 ? $"{label} ({n})" : label;
         }
 
-        void DrawGeneral(YukiWardrobe config, OutfitGroup group)
+        void DrawGeneral(YukiWardrobe config, WardrobeEntry entry)
         {
+            bool isNone = entry.kind == EntryKind.None;
             EditorGUI.BeginChangeCheck();
-            var root = (GameObject)EditorGUILayout.ObjectField(new GUIContent(L["ui.outfit_root"], L["ui.outfit_root.tip"]), group.root, typeof(GameObject), true);
-            var display = EditorGUILayout.TextField(new GUIContent(L["ui.display_name"], L["ui.display_name.tip"]), group.displayName);
-            var icon = (Texture2D)EditorGUILayout.ObjectField(L["ui.icon"], group.icon, typeof(Texture2D), false, IconHeight);
-            var category = EditorGUILayout.TextField(new GUIContent(L["ui.category"], L["ui.category.tip"]), group.category);
-            var platformNames = System.Enum.GetNames(typeof(OutfitPlatform)).Select(n => L["ui.platform." + n]).ToArray();
-            var platform = (OutfitPlatform)EditorGUILayout.Popup(new GUIContent(L["ui.platform"], L["ui.platform.tip"]), (int)group.platform, platformNames);
+            var root = entry.root;
+            if (!isNone) root = (GameObject)EditorGUILayout.ObjectField(new GUIContent(L["ui.outfit_root"], L["ui.outfit_root.tip"]), entry.root, typeof(GameObject), true);
+            var display = EditorGUILayout.TextField(new GUIContent(L["ui.display_name"], L["ui.display_name.tip"]), entry.displayName);
+            var icon = (Texture2D)EditorGUILayout.ObjectField(L["ui.icon"], entry.icon, typeof(Texture2D), false, IconHeight);
+            var category = EditorGUILayout.TextField(new GUIContent(L["ui.category"], L["ui.category.tip"]), entry.category);
+            var platform = entry.platform;
+            if (!isNone)
+            {
+                var platformNames = System.Enum.GetNames(typeof(OutfitPlatform)).Select(n => L["ui.platform." + n]).ToArray();
+                platform = (OutfitPlatform)EditorGUILayout.Popup(new GUIContent(L["ui.platform"], L["ui.platform.tip"]), (int)entry.platform, platformNames);
+            }
             if (EditorGUI.EndChangeCheck())
             {
                 UndoEdit.Begin(config, "Edit outfit");
-                if (root != group.root)
+                if (root != entry.root)
                 {
-                    group.root = root;
-                    group.toggleablePieces.RemoveAll(p => p == null || root == null || p.transform.parent != root.transform);
+                    entry.root = root;
+                    entry.pieces.RemoveAll(p => p == null || p.target == null || root == null || p.target.transform.parent != root.transform);
                 }
-                group.displayName = display;
-                group.icon = icon;
-                group.category = category;
-                group.platform = platform;
+                entry.displayName = display;
+                entry.icon = icon;
+                entry.category = category;
+                entry.platform = platform;
                 UndoEdit.End(config);
                 OnChanged();
             }
-            if (config.outfits.IndexOf(group) == 0)
+            EditorGUILayout.LabelField(" ", L.Tr("ui.entry_value", entry.value), EditorStyles.miniLabel);
+            if (config.DefaultEntry == entry)
                 EditorGUILayout.HelpBox(L["ui.default_outfit.help"], MessageType.None);
         }
 
-        void DrawPieces(YukiWardrobe config, OutfitGroup group)
+        void DrawPieces(YukiWardrobe config, WardrobeEntry entry)
         {
-            if (group.root == null) return;
+            if (entry.root == null) return;
             EditorGUILayout.LabelField(L["ui.pieces.help"], YukiGUI.WrapMini);
             EditorGUILayout.Space(2);
-            foreach (Transform child in group.root.transform)
+            foreach (Transform child in entry.root.transform)
             {
                 var go = child.gameObject;
-                bool on = group.toggleablePieces.Contains(go);
-                var settings = group.FindPiece(go);
+                var piece = entry.FindPiece(go);
+                bool on = piece != null;
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     bool now = EditorGUILayout.ToggleLeft(child.name, on, GUILayout.Width(180));
                     if (now != on)
                     {
                         UndoEdit.Begin(config, "Edit toggleable pieces");
-                        if (now) group.toggleablePieces.Add(go);
-                        else group.toggleablePieces.Remove(go);
+                        if (now) entry.pieces.Add(piece = new WardrobePiece { target = go });
+                        else entry.pieces.Remove(piece);
+                        config.EnsureIds();
                         UndoEdit.End(config);
                         OnChanged();
                     }
-                    using (new EditorGUI.DisabledScope(!now))
+                    using (new EditorGUI.DisabledScope(!now || piece == null))
                     {
                         EditorGUI.BeginChangeCheck();
-                        var name = EditorGUILayout.TextField(settings?.displayName ?? "");
-                        var icon = (Texture2D)EditorGUILayout.ObjectField(settings?.icon, typeof(Texture2D), false, GUILayout.Width(110), IconHeight);
-                        if (EditorGUI.EndChangeCheck())
+                        var name = EditorGUILayout.TextField(piece?.displayName ?? "");
+                        var icon = (Texture2D)EditorGUILayout.ObjectField(piece?.icon, typeof(Texture2D), false, GUILayout.Width(110), IconHeight);
+                        if (EditorGUI.EndChangeCheck() && piece != null)
                         {
                             UndoEdit.Begin(config, "Edit piece");
-                            if (settings == null) group.pieceSettings.Add(settings = new PieceSettings { target = go });
-                            settings.displayName = name;
-                            settings.icon = icon;
+                            piece.displayName = name;
+                            piece.icon = icon;
                             UndoEdit.End(config);
                         }
                         GUILayout.Label(go.activeSelf ? L["ui.default_on"] : L["ui.default_off"], EditorStyles.miniLabel, GUILayout.Width(60));
@@ -577,11 +606,11 @@ namespace TsiYuki.Wardrobe.Editor
             }
         }
 
-        void DrawBody(YukiWardrobe config, OutfitGroup group, WardrobeModel model)
+        void DrawBody(YukiWardrobe config, WardrobeEntry entry, WardrobeModel model)
         {
             EditorGUILayout.LabelField(L["ui.body.help"], YukiGUI.WrapMini);
             BlendshapeOverride remove = null;
-            foreach (var over in group.blendshapes)
+            foreach (var over in entry.blendshapes)
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -604,7 +633,7 @@ namespace TsiYuki.Wardrobe.Editor
             if (remove != null)
             {
                 UndoEdit.Begin(config, "Remove blendshape override");
-                group.blendshapes.Remove(remove);
+                entry.blendshapes.Remove(remove);
                 UndoEdit.End(config);
                 OnChanged();
             }
@@ -612,13 +641,13 @@ namespace TsiYuki.Wardrobe.Editor
             {
                 UndoEdit.Begin(config, "Add blendshape override");
                 var body = avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "Body" || r.name == "Body_base");
-                group.blendshapes.Add(new BlendshapeOverride { renderer = body, value = 100 });
+                entry.blendshapes.Add(new BlendshapeOverride { renderer = body, value = 100 });
                 UndoEdit.End(config);
             }
 
             if (model == null) return;
             var candidates = WardrobeActions.ShrinkCandidates(avatar.transform, model)
-                .Where(c => !group.blendshapes.Any(b => b.renderer == c.renderer && b.blendshape == c.shape)).ToList();
+                .Where(c => !entry.blendshapes.Any(b => b.renderer == c.renderer && b.blendshape == c.shape)).ToList();
             if (candidates.Count == 0) return;
             YukiGUI.Section(L["ui.suggestions"]);
             EditorGUILayout.LabelField(L["ui.suggestions.help"], YukiGUI.WrapMini);
@@ -630,7 +659,7 @@ namespace TsiYuki.Wardrobe.Editor
                     if (GUILayout.Button(L["ui.add"], EditorStyles.miniButton, GUILayout.Width(60)))
                     {
                         UndoEdit.Begin(config, "Add blendshape override");
-                        group.blendshapes.Add(new BlendshapeOverride { renderer = renderer, blendshape = shape, value = 100 });
+                        entry.blendshapes.Add(new BlendshapeOverride { renderer = renderer, blendshape = shape, value = 100 });
                         UndoEdit.End(config);
                         OnChanged();
                     }
@@ -638,11 +667,11 @@ namespace TsiYuki.Wardrobe.Editor
             }
         }
 
-        void DrawObjects(YukiWardrobe config, OutfitGroup group)
+        void DrawObjects(YukiWardrobe config, WardrobeEntry entry)
         {
             EditorGUILayout.LabelField(L["ui.objects.help"], YukiGUI.WrapMini);
             ObjectOverride remove = null;
-            foreach (var over in group.objectOverrides)
+            foreach (var over in entry.objectOverrides)
             {
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -663,28 +692,28 @@ namespace TsiYuki.Wardrobe.Editor
             if (remove != null)
             {
                 UndoEdit.Begin(config, "Remove object override");
-                group.objectOverrides.Remove(remove);
+                entry.objectOverrides.Remove(remove);
                 UndoEdit.End(config);
                 OnChanged();
             }
             if (GUILayout.Button(L["ui.add"], GUILayout.Width(80)))
             {
                 UndoEdit.Begin(config, "Add object override");
-                group.objectOverrides.Add(new ObjectOverride());
+                entry.objectOverrides.Add(new ObjectOverride());
                 UndoEdit.End(config);
             }
         }
 
-        void DrawMenus(YukiWardrobe config, OutfitGroup group, ResolvedOutfit resolved)
+        void DrawMenus(YukiWardrobe config, WardrobeEntry entry, ResolvedOutfit resolved)
         {
             EditorGUILayout.LabelField(L["ui.menus.help"], YukiGUI.WrapMini);
             EditorGUI.BeginChangeCheck();
             var modeNames = System.Enum.GetNames(typeof(OutfitMenuMode)).Select(n => L["ui.menu_mode." + n]).ToArray();
-            var mode = (OutfitMenuMode)EditorGUILayout.Popup(L["ui.menu_mode"], (int)group.menuMode, modeNames);
+            var mode = (OutfitMenuMode)EditorGUILayout.Popup(L["ui.menu_mode"], (int)entry.menuMode, modeNames);
             if (EditorGUI.EndChangeCheck())
             {
                 UndoEdit.Begin(config, "Outfit menu mode");
-                group.menuMode = mode;
+                entry.menuMode = mode;
                 UndoEdit.End(config);
                 OnChanged();
             }
@@ -710,7 +739,7 @@ namespace TsiYuki.Wardrobe.Editor
                 }
             }
 
-            var convertible = WardrobeActions.ConvertibleToggles(group);
+            var convertible = WardrobeActions.ConvertibleToggles(entry);
             if (convertible.Count > 0)
             {
                 YukiGUI.Section(L["ui.convert"]);
@@ -718,7 +747,7 @@ namespace TsiYuki.Wardrobe.Editor
                 if (GUILayout.Button(L["ui.convert.button"], GUILayout.Width(220)) &&
                     EditorUtility.DisplayDialog("Yuki Wardrobe", L["ui.convert.confirm"], L["ui.ok"], L["ui.cancel"]))
                 {
-                    WardrobeActions.ConvertToPieces(config, group, convertible);
+                    WardrobeActions.ConvertToPieces(config, entry, convertible);
                     OnChanged();
                 }
             }
@@ -754,80 +783,106 @@ namespace TsiYuki.Wardrobe.Editor
                 DrawNode(node.Children[i], depth + 1, key + "/" + i);
         }
 
-        void DrawVariants(YukiWardrobe config, OutfitGroup group)
+        // Colors: a table with one row per color and one column per slot.
+        void DrawColors(YukiWardrobe config, WardrobeEntry entry)
         {
             EditorGUILayout.LabelField(L["ui.variants.help"], YukiGUI.WrapMini);
-            OutfitVariant removeVariant = null;
-            for (int v = 0; v < group.variants.Count; v++)
+
+            YukiGUI.Section(L["ui.color_slots"]);
+            ColorSlot removeSlot = null;
+            foreach (var slot in entry.colorSlots)
             {
-                var variant = group.variants[v];
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUI.BeginChangeCheck();
+                    var renderer = (Renderer)EditorGUILayout.ObjectField(slot.renderer, typeof(Renderer), true, GUILayout.Width(180));
+                    var count = renderer != null ? renderer.sharedMaterials.Length : 0;
+                    var slotIndex = EditorGUILayout.Popup(Mathf.Clamp(slot.slot, 0, Mathf.Max(0, count - 1)),
+                        Enumerable.Range(0, Mathf.Max(1, count)).Select(i => renderer != null && i < count && renderer.sharedMaterials[i] != null ? $"{i}: {renderer.sharedMaterials[i].name}" : i.ToString()).ToArray());
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        UndoEdit.Begin(config, "Edit color slot");
+                        slot.renderer = renderer;
+                        slot.slot = slotIndex;
+                        UndoEdit.End(config);
+                    }
+                    if (GUILayout.Button("×", GUILayout.Width(22))) removeSlot = slot;
+                }
+            }
+            if (removeSlot != null)
+            {
+                UndoEdit.Begin(config, "Remove color slot");
+                var index = entry.colorSlots.IndexOf(removeSlot);
+                entry.colorSlots.RemoveAt(index);
+                foreach (var c in entry.colors) if (index < c.materials.Count) c.materials.RemoveAt(index);
+                UndoEdit.End(config);
+                OnChanged();
+            }
+            if (GUILayout.Button(L["ui.add_material"], GUILayout.Width(140)))
+            {
+                UndoEdit.Begin(config, "Add color slot");
+                var renderer = entry.root != null ? entry.root.GetComponentInChildren<Renderer>(true) : null;
+                entry.colorSlots.Add(new ColorSlot { renderer = renderer });
+                foreach (var c in entry.colors) c.materials.Add(renderer != null && renderer.sharedMaterials.Length > 0 ? renderer.sharedMaterials[0] : null);
+                UndoEdit.End(config);
+                OnChanged();
+            }
+
+            YukiGUI.Section(L["ui.colors"]);
+            OutfitColor removeColor = null;
+            for (int v = 0; v < entry.colors.Count; v++)
+            {
+                var color = entry.colors[v];
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         EditorGUI.BeginChangeCheck();
-                        var name = EditorGUILayout.TextField(variant.displayName);
-                        var icon = (Texture2D)EditorGUILayout.ObjectField(variant.icon, typeof(Texture2D), false, GUILayout.Width(110), IconHeight);
+                        var name = EditorGUILayout.TextField(color.displayName);
+                        var icon = (Texture2D)EditorGUILayout.ObjectField(color.icon, typeof(Texture2D), false, GUILayout.Width(110), IconHeight);
                         if (EditorGUI.EndChangeCheck())
                         {
-                            UndoEdit.Begin(config, "Edit variant");
-                            variant.displayName = name;
-                            variant.icon = icon;
+                            UndoEdit.Begin(config, "Edit color");
+                            color.displayName = name;
+                            color.icon = icon;
                             UndoEdit.End(config);
                         }
                         if (v == 0) GUILayout.Label(L["ui.badge.default"], EditorStyles.miniBoldLabel, GUILayout.Width(50));
-                        if (group.root != null && GUILayout.Button(L["ui.try_on"], EditorStyles.miniButton, GUILayout.Width(70)))
-                            WardrobePreview.Show(avatar.transform, config, group.root, v);
-                        if (GUILayout.Button("×", GUILayout.Width(22))) removeVariant = variant;
+                        if (entry.root != null && GUILayout.Button(L["ui.try_on"], EditorStyles.miniButton, GUILayout.Width(70)))
+                            WardrobePreview.Show(avatar.transform, config, entry, v);
+                        if (GUILayout.Button("×", GUILayout.Width(22))) removeColor = color;
                     }
-
-                    MaterialSlotOverride removeSlot = null;
-                    foreach (var slot in variant.materials)
+                    for (int i = 0; i < entry.colorSlots.Count; i++)
                     {
-                        using (new EditorGUILayout.HorizontalScope())
+                        var slot = entry.colorSlots[i];
+                        while (color.materials.Count <= i) color.materials.Add(null);
+                        EditorGUI.BeginChangeCheck();
+                        var label = slot.renderer != null ? $"{slot.renderer.name} [{slot.slot}]" : "—";
+                        var material = (Material)EditorGUILayout.ObjectField(label, color.materials[i], typeof(Material), false);
+                        if (EditorGUI.EndChangeCheck())
                         {
-                            EditorGUI.BeginChangeCheck();
-                            var renderer = (Renderer)EditorGUILayout.ObjectField(slot.renderer, typeof(Renderer), true, GUILayout.Width(150));
-                            var count = renderer != null ? renderer.sharedMaterials.Length : 0;
-                            var slotIndex = EditorGUILayout.Popup(Mathf.Clamp(slot.slot, 0, Mathf.Max(0, count - 1)),
-                                Enumerable.Range(0, Mathf.Max(1, count)).Select(i => renderer != null && i < count && renderer.sharedMaterials[i] != null ? $"{i}: {renderer.sharedMaterials[i].name}" : i.ToString()).ToArray(), GUILayout.Width(150));
-                            var material = (Material)EditorGUILayout.ObjectField(slot.material, typeof(Material), false);
-                            if (EditorGUI.EndChangeCheck())
-                            {
-                                UndoEdit.Begin(config, "Edit variant material");
-                                slot.renderer = renderer;
-                                slot.slot = slotIndex;
-                                slot.material = material;
-                                UndoEdit.End(config);
-                            }
-                            if (GUILayout.Button("×", GUILayout.Width(22))) removeSlot = slot;
+                            UndoEdit.Begin(config, "Edit color material");
+                            color.materials[i] = material;
+                            UndoEdit.End(config);
                         }
-                    }
-                    if (removeSlot != null)
-                    {
-                        UndoEdit.Begin(config, "Remove variant material");
-                        variant.materials.Remove(removeSlot);
-                        UndoEdit.End(config);
-                    }
-                    if (GUILayout.Button(L["ui.add_material"], EditorStyles.miniButton, GUILayout.Width(120)))
-                    {
-                        UndoEdit.Begin(config, "Add variant material");
-                        variant.materials.Add(new MaterialSlotOverride { renderer = group.root != null ? group.root.GetComponentInChildren<Renderer>(true) : null });
-                        UndoEdit.End(config);
                     }
                 }
             }
-            if (removeVariant != null)
+            if (removeColor != null)
             {
-                UndoEdit.Begin(config, "Remove variant");
-                group.variants.Remove(removeVariant);
+                UndoEdit.Begin(config, "Remove color");
+                entry.colors.Remove(removeColor);
                 UndoEdit.End(config);
                 OnChanged();
             }
-            if (GUILayout.Button(L["ui.add_variant"], GUILayout.Width(120)))
+            if (GUILayout.Button(L["ui.add_variant"], GUILayout.Width(140)))
             {
-                UndoEdit.Begin(config, "Add variant");
-                group.variants.Add(new OutfitVariant { displayName = group.variants.Count == 0 ? L["ui.variant_original"] : "" });
+                UndoEdit.Begin(config, "Add color");
+                // A new color starts from the scene materials.
+                var color = new OutfitColor { displayName = entry.colors.Count == 0 ? L["ui.variant_original"] : "" };
+                foreach (var slot in entry.colorSlots)
+                    color.materials.Add(slot.renderer != null && slot.slot < slot.renderer.sharedMaterials.Length ? slot.renderer.sharedMaterials[slot.slot] : null);
+                entry.colors.Add(color);
                 UndoEdit.End(config);
                 OnChanged();
             }
@@ -839,28 +894,29 @@ namespace TsiYuki.Wardrobe.Editor
         {
             YukiGUI.Section(L["ui.looks"]);
             EditorGUILayout.LabelField(L["ui.looks.help"], YukiGUI.WrapMini);
-            var outfitRoots = config.outfits.Where(o => o.root != null).Select(o => o.root).ToList();
-            var outfitNames = config.outfits.Where(o => o.root != null).Select(o => WardrobeModel.Fallback(o.displayName, o.root.name)).ToArray();
+            var outfits = config.entries.Where(e => e != null && e.kind == EntryKind.Outfit && e.root != null).ToList();
+            var outfitNames = outfits.Select(EntryName).ToArray();
 
             WardrobeLook remove = null;
             foreach (var look in config.looks)
             {
                 using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
+                    var current = outfits.FirstOrDefault(o => o.id == look.entryId);
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         EditorGUI.BeginChangeCheck();
                         var name = EditorGUILayout.TextField(look.displayName);
                         var icon = (Texture2D)EditorGUILayout.ObjectField(look.icon, typeof(Texture2D), false, GUILayout.Width(110), IconHeight);
-                        var index = EditorGUILayout.Popup(Mathf.Max(0, outfitRoots.IndexOf(look.outfit)), outfitNames, GUILayout.Width(140));
+                        var index = EditorGUILayout.Popup(Mathf.Max(0, outfits.IndexOf(current)), outfitNames, GUILayout.Width(140));
                         if (EditorGUI.EndChangeCheck())
                         {
                             UndoEdit.Begin(config, "Edit look");
                             look.displayName = name;
                             look.icon = icon;
-                            if (index >= 0 && index < outfitRoots.Count && look.outfit != outfitRoots[index])
+                            if (index >= 0 && index < outfits.Count && look.entryId != outfits[index].id)
                             {
-                                look.outfit = outfitRoots[index];
+                                look.entryId = outfits[index].id;
                                 look.pieces.Clear();
                             }
                             UndoEdit.End(config);
@@ -868,17 +924,17 @@ namespace TsiYuki.Wardrobe.Editor
                         }
                         if (GUILayout.Button("×", GUILayout.Width(22))) remove = look;
                     }
-                    var group = config.outfits.FirstOrDefault(o => o.root == look.outfit);
-                    if (group == null) continue;
-                    foreach (var piece in group.toggleablePieces.Where(p => p != null))
+                    current = outfits.FirstOrDefault(o => o.id == look.entryId);
+                    if (current == null) continue;
+                    foreach (var piece in current.pieces.Where(p => p != null && p.target != null))
                     {
-                        var state = look.pieces.FirstOrDefault(p => p.piece == piece);
-                        bool on = state != null ? state.on : piece.activeSelf;
-                        bool now = EditorGUILayout.ToggleLeft(WardrobeModel.Fallback(group.FindPiece(piece)?.displayName, piece.name), on);
+                        var state = look.pieces.FirstOrDefault(p => p.pieceId == piece.id);
+                        bool on = state != null ? state.on : piece.target.activeSelf;
+                        bool now = EditorGUILayout.ToggleLeft(WardrobeModel.Fallback(piece.displayName, piece.target.name), on);
                         if (now != on)
                         {
                             UndoEdit.Begin(config, "Edit look");
-                            if (state == null) look.pieces.Add(state = new LookPiece { piece = piece });
+                            if (state == null) look.pieces.Add(state = new LookPiece { pieceId = piece.id });
                             state.on = now;
                             UndoEdit.End(config);
                         }
@@ -892,11 +948,11 @@ namespace TsiYuki.Wardrobe.Editor
                 UndoEdit.End(config);
                 OnChanged();
             }
-            using (new EditorGUI.DisabledScope(outfitRoots.Count == 0))
+            using (new EditorGUI.DisabledScope(outfits.Count == 0))
                 if (GUILayout.Button(L["ui.add_look"], GUILayout.Width(120)))
                 {
                     UndoEdit.Begin(config, "Add look");
-                    config.looks.Add(new WardrobeLook { outfit = outfitRoots.FirstOrDefault(), displayName = L.Tr("ui.look_n", config.looks.Count + 1) });
+                    config.looks.Add(new WardrobeLook { entryId = outfits.First().id, displayName = L.Tr("ui.look_n", config.looks.Count + 1) });
                     UndoEdit.End(config);
                     OnChanged();
                 }
@@ -919,14 +975,16 @@ namespace TsiYuki.Wardrobe.Editor
         static MenuNode BuildPreviewTree(WardrobeModel model)
         {
             var root = new MenuNode { Label = "▣ " + model.MenuName, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
-            if (model.IncludeNone) root.Children.Add(Toggle(model.NoneLabel, model.ParameterName, model.NoneIndex));
-            foreach (var outfit in model.Outfits.Where(o => MenuGenerator.IsDefaultCategory(o.Category)))
-                root.Children.Add(OutfitNode(outfit, model));
-            foreach (var category in model.Outfits.Where(o => !MenuGenerator.IsDefaultCategory(o.Category)).GroupBy(o => o.Category))
+            var folders = new Dictionary<string, MenuNode>();
+            foreach (var entry in model.Entries)
             {
-                var folder = new MenuNode { Label = category.Key, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
-                foreach (var outfit in category) folder.Children.Add(OutfitNode(outfit, model));
-                root.Children.Add(folder);
+                var parent = root;
+                if (!string.IsNullOrEmpty(entry.Category) && !folders.TryGetValue(entry.Category, out parent))
+                {
+                    parent = folders[entry.Category] = new MenuNode { Label = entry.Category, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
+                    root.Children.Add(parent);
+                }
+                parent.Children.Add(OutfitNode(entry, model));
             }
             if (model.Looks.Count > 0)
             {
@@ -940,15 +998,16 @@ namespace TsiYuki.Wardrobe.Editor
 
         static MenuNode OutfitNode(ResolvedOutfit outfit, WardrobeModel model)
         {
-            if (!outfit.HasSubmenu) return Toggle(outfit.DisplayName, model.ParameterName, outfit.Index);
-            var node = new MenuNode { Label = outfit.DisplayName, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
-            node.Children.Add(Toggle(WardrobeText.L["menu.wear"], model.ParameterName, outfit.Index));
-            foreach (var e in outfit.Elements)
+            var label = outfit.IsDefault ? outfit.DisplayName + " ★" : outfit.DisplayName;
+            if (!outfit.HasSubmenu) return Toggle(label, model.ParameterName, outfit.Value);
+            var node = new MenuNode { Label = label, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
+            node.Children.Add(Toggle(WardrobeText.L["menu.wear"], model.ParameterName, outfit.Value));
+            foreach (var e in outfit.Pieces)
                 node.Children.Add(new MenuNode { Label = e.DisplayName, Type = VRCExpressionsMenu.Control.ControlType.Toggle, Parameter = e.ParameterName, IsDefault = e.DefaultOn });
-            if (outfit.VariantParameter != null)
+            if (outfit.ColorParameter != null)
             {
                 var colors = new MenuNode { Label = WardrobeText.L["menu.variants"], Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
-                foreach (var v in outfit.Variants) colors.Children.Add(Toggle(v.DisplayName, outfit.VariantParameter, v.Index));
+                foreach (var v in outfit.Colors) colors.Children.Add(Toggle(v.DisplayName, outfit.ColorParameter, v.Index));
                 node.Children.Add(colors);
             }
             if (outfit.MenuMode == OutfitMenuMode.Absorb)

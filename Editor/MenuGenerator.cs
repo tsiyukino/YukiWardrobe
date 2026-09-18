@@ -18,18 +18,21 @@ namespace TsiYuki.Wardrobe.Editor
             root.AddComponent<ModularAvatarMenuInstaller>();
             SubMenu(root, model.MenuName, model.MenuIcon);
 
-            if (model.IncludeNone)
-                Toggle(root.transform, model.NoneLabel, model.NoneIcon, model.ParameterName, model.NoneIndex);
-
-            foreach (var outfit in model.Outfits.Where(o => IsDefaultCategory(o.Category)))
-                AddOutfit(root.transform, outfit, model);
-
-            foreach (var category in model.Outfits.Where(o => !IsDefaultCategory(o.Category)).GroupBy(o => o.Category))
+            // List order; a category becomes a submenu where its first entry is.
+            var folders = new System.Collections.Generic.Dictionary<string, Transform>();
+            foreach (var entry in model.Entries)
             {
-                var folder = Child(root.transform, category.Key);
-                SubMenu(folder, category.Key, null);
-                foreach (var outfit in category)
-                    AddOutfit(folder.transform, outfit, model);
+                var parent = root.transform;
+                if (!string.IsNullOrEmpty(entry.Category))
+                {
+                    if (!folders.TryGetValue(entry.Category, out parent))
+                    {
+                        var folder = Child(root.transform, entry.Category);
+                        SubMenu(folder, entry.Category, null);
+                        folders[entry.Category] = parent = folder.transform;
+                    }
+                }
+                AddEntry(parent, entry, model);
             }
 
             if (model.Looks.Count > 0)
@@ -42,27 +45,27 @@ namespace TsiYuki.Wardrobe.Editor
             return root;
         }
 
-        static void AddOutfit(Transform parent, ResolvedOutfit outfit, WardrobeModel model)
+        static void AddEntry(Transform parent, ResolvedOutfit outfit, WardrobeModel model)
         {
             if (!outfit.HasSubmenu)
             {
-                Toggle(parent, outfit.DisplayName, outfit.Icon, model.ParameterName, outfit.Index);
+                Toggle(parent, outfit.DisplayName, outfit.Icon, model.ParameterName, outfit.Value);
                 return;
             }
 
             var menu = Child(parent, outfit.DisplayName);
             SubMenu(menu, outfit.DisplayName, outfit.Icon);
-            Toggle(menu.transform, WardrobeText.L["menu.wear"], outfit.Icon, model.ParameterName, outfit.Index);
+            Toggle(menu.transform, WardrobeText.L["menu.wear"], outfit.Icon, model.ParameterName, outfit.Value);
 
-            foreach (var element in outfit.Elements)
-                Toggle(menu.transform, element.DisplayName, element.Icon, element.ParameterName, 1);
+            foreach (var piece in outfit.Pieces)
+                Toggle(menu.transform, piece.DisplayName, piece.Icon, piece.ParameterName, 1);
 
-            if (outfit.VariantParameter != null)
+            if (outfit.ColorParameter != null)
             {
                 var colors = Child(menu.transform, WardrobeText.L["menu.variants"]);
                 SubMenu(colors, WardrobeText.L["menu.variants"], null);
-                foreach (var variant in outfit.Variants)
-                    Toggle(colors.transform, variant.DisplayName, variant.Icon, outfit.VariantParameter, variant.Index);
+                foreach (var color in outfit.Colors)
+                    Toggle(colors.transform, color.DisplayName, color.Icon, outfit.ColorParameter, color.Index);
             }
 
             if (outfit.MenuMode == OutfitMenuMode.Absorb)
@@ -90,9 +93,6 @@ namespace TsiYuki.Wardrobe.Editor
             InstallTargetType.GetField("installer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
                 ?.SetValue(component, installer);
         }
-
-        public static bool IsDefaultCategory(string category) =>
-            string.IsNullOrWhiteSpace(category) || string.Equals(category, "Default", System.StringComparison.OrdinalIgnoreCase);
 
         static GameObject Child(Transform parent, string name)
         {

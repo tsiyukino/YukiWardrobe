@@ -17,14 +17,16 @@ namespace TsiYuki.Wardrobe.Editor
             var host = new GameObject(name);
             Undo.RegisterCreatedObjectUndo(host, "Create Wardrobe");
             host.transform.SetParent(avatar.transform, false);
-            return Undo.AddComponent<YukiWardrobe>(host);
+            var config = Undo.AddComponent<YukiWardrobe>(host);
+            config.EnsureIds();
+            return config;
         }
 
         /// <summary>
         /// Adds an outfit: a prefab is placed under the avatar and set up with
         /// Modular Avatar's "Setup Outfit" first; a scene object is added as is.
         /// </summary>
-        public static OutfitGroup AddOutfit(YukiWardrobe config, VRCAvatarDescriptor avatar, GameObject source, string category)
+        public static WardrobeEntry AddOutfit(YukiWardrobe config, VRCAvatarDescriptor avatar, GameObject source, string category)
         {
             if (source == null) return null;
             var go = source;
@@ -43,12 +45,27 @@ namespace TsiYuki.Wardrobe.Editor
                 SetupOutfit(go);
             }
 
-            if (config.outfits.Any(o => o.root == go)) return config.outfits.First(o => o.root == go);
+            var existing = config.entries.FirstOrDefault(o => o != null && o.root == go);
+            if (existing != null) return existing;
             UndoEdit.Begin(config, "Add outfit");
-            var group = new OutfitGroup { root = go, category = string.IsNullOrWhiteSpace(category) ? "Default" : category };
-            config.outfits.Add(group);
+            var entry = new WardrobeEntry { root = go, category = (category ?? "").Trim() };
+            config.entries.Add(entry);
+            config.EnsureIds();
+            if (string.IsNullOrEmpty(config.defaultEntry)) config.defaultEntry = entry.id;
             UndoEdit.End(config);
-            return group;
+            return entry;
+        }
+
+        public static WardrobeEntry AddNone(YukiWardrobe config)
+        {
+            var existing = config.entries.FirstOrDefault(e => e != null && e.kind == EntryKind.None);
+            if (existing != null) return existing;
+            UndoEdit.Begin(config, "Add None");
+            var entry = new WardrobeEntry { kind = EntryKind.None };
+            config.entries.Add(entry);
+            config.EnsureIds();
+            UndoEdit.End(config);
+            return entry;
         }
 
         static bool LooksLikeOutfitPrefab(GameObject go) =>
@@ -89,10 +106,10 @@ namespace TsiYuki.Wardrobe.Editor
         /// Items of an outfit's own menu that simply show or hide one direct
         /// child of the outfit, and so can become wardrobe pieces.
         /// </summary>
-        public static List<(ModularAvatarMenuItem item, GameObject target, bool visibleByDefault)> ConvertibleToggles(OutfitGroup group)
+        public static List<(ModularAvatarMenuItem item, GameObject target, bool visibleByDefault)> ConvertibleToggles(WardrobeEntry group)
         {
             var result = new List<(ModularAvatarMenuItem, GameObject, bool)>();
-            if (group.root == null) return result;
+            if (group.root == null || group.kind != EntryKind.Outfit) return result;
             foreach (var toggle in group.root.GetComponentsInChildren<ModularAvatarObjectToggle>(true))
             {
                 var item = toggle.GetComponent<ModularAvatarMenuItem>();
@@ -108,7 +125,7 @@ namespace TsiYuki.Wardrobe.Editor
             return result;
         }
 
-        public static void ConvertToPieces(YukiWardrobe config, OutfitGroup group, IEnumerable<(ModularAvatarMenuItem item, GameObject target, bool visibleByDefault)> toggles)
+        public static void ConvertToPieces(YukiWardrobe config, WardrobeEntry group, IEnumerable<(ModularAvatarMenuItem item, GameObject target, bool visibleByDefault)> toggles)
         {
             Undo.SetCurrentGroupName("Convert outfit toggles to pieces");
             var group_ = Undo.GetCurrentGroup();
@@ -116,9 +133,8 @@ namespace TsiYuki.Wardrobe.Editor
             var removals = new List<GameObject>();
             foreach (var (item, target, visible) in toggles)
             {
-                if (!group.toggleablePieces.Contains(target)) group.toggleablePieces.Add(target);
                 var settings = group.FindPiece(target);
-                if (settings == null) group.pieceSettings.Add(settings = new PieceSettings { target = target });
+                if (settings == null) group.pieces.Add(settings = new WardrobePiece { target = target });
                 settings.displayName = string.IsNullOrEmpty(item.label) ? item.gameObject.name : item.label;
                 if (item.Control?.icon != null) settings.icon = item.Control.icon;
                 if (target.activeSelf != visible)
@@ -128,6 +144,7 @@ namespace TsiYuki.Wardrobe.Editor
                 }
                 removals.Add(item.gameObject);
             }
+            config.EnsureIds();
             UndoEdit.End(config);
             // Remove the converted menu items; a menu object that only held
             // those items is removed with them.

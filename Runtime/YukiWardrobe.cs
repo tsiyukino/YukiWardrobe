@@ -5,35 +5,11 @@ using VRC.SDKBase;
 
 namespace TsiYuki.Wardrobe
 {
-    [Serializable]
-    public class ObjectOverride
+    public enum EntryKind
     {
-        // Object elsewhere in the avatar (outside any outfit root) forced to
-        // this state while the outfit is worn. Outfits that don't mention an
-        // object restore the active state it has in the scene at build time.
-        public GameObject target;
-        public bool enable = true;
-    }
-
-    [Serializable]
-    public class BlendshapeOverride
-    {
-        // Renderer on the avatar (typically the body mesh) whose blendshape
-        // is set to this value while the outfit is worn. Other outfits
-        // restore the value the mesh had at build time.
-        public SkinnedMeshRenderer renderer;
-        public string blendshape;
-        [Range(0, 100)] public float value;
-    }
-
-    // Menu name and icon of one toggleable piece. Pieces without an entry use
-    // the object name and no icon.
-    [Serializable]
-    public class PieceSettings
-    {
-        public GameObject target;
-        public string displayName = "";
-        public Texture2D icon;
+        Outfit = 0,
+        // Wears none of the outfits.
+        None = 1,
     }
 
     // What happens to Modular Avatar menus that ship inside an outfit
@@ -55,62 +31,96 @@ namespace TsiYuki.Wardrobe
         MobileOnly = 2,
     }
 
-    // Replaces one material slot while a color / material variant is selected.
+    // A direct child of an outfit with its own on/off toggle. Its default is
+    // the object's active state in the scene.
     [Serializable]
-    public class MaterialSlotOverride
+    public class WardrobePiece
+    {
+        // Stable id used in the parameter name; never derived from names, so
+        // renaming the object or the label keeps saved selections.
+        public string id = "";
+        public GameObject target;
+        public string displayName = "";
+        public Texture2D icon;
+    }
+
+    [Serializable]
+    public class BlendshapeOverride
+    {
+        // Renderer on the avatar (typically the body mesh) whose blendshape
+        // is set to this value while the outfit is worn. Other outfits
+        // restore the value the mesh had at build time.
+        public SkinnedMeshRenderer renderer;
+        public string blendshape;
+        [Range(0, 100)] public float value = 100;
+    }
+
+    [Serializable]
+    public class ObjectOverride
+    {
+        // Object elsewhere in the avatar (outside any outfit) forced to this
+        // state while the outfit is worn. Outfits that don't mention it
+        // restore the active state it has in the scene at build time.
+        public GameObject target;
+        public bool enable = true;
+    }
+
+    // One material slot that colors of an outfit replace.
+    [Serializable]
+    public class ColorSlot
     {
         public Renderer renderer;
         public int slot;
-        public Material material;
     }
 
+    // One color of an outfit: a material for each of the outfit's color
+    // slots (same order). The first color is the default.
     [Serializable]
-    public class OutfitVariant
+    public class OutfitColor
     {
         public string displayName = "";
         public Texture2D icon;
-        public List<MaterialSlotOverride> materials = new List<MaterialSlotOverride>();
+        public List<Material> materials = new List<Material>();
     }
 
+    // One row of the wardrobe menu: an outfit, or the "None" option.
     [Serializable]
-    public class OutfitGroup
+    public class WardrobeEntry
     {
-        // Parent GameObject whose direct children are the pieces of this outfit.
+        public string id = "";
+
+        // Value of the wardrobe's int parameter for this entry. Assigned once
+        // and never reused, so reordering the list keeps saved selections.
+        // 0 is reserved for "the default entry".
+        public int value;
+
+        public EntryKind kind = EntryKind.Outfit;
+
+        // Parent object of the outfit; its direct children can be pieces.
         public GameObject root;
 
-        // Menu label; empty uses the root's name. Changing it never changes
-        // parameter names, so saved selections survive renames.
+        // Menu label; empty uses the object name.
         public string displayName = "";
         public Texture2D icon;
 
-        public string category = "Default";
+        // Entries with a category are grouped into a submenu of that name.
+        public string category = "";
 
-        // Direct children of root that get their own bool parameter and menu
-        // toggle. Empty means the outfit is a single on/off unit.
-        public List<GameObject> toggleablePieces = new List<GameObject>();
-        public List<PieceSettings> pieceSettings = new List<PieceSettings>();
-
-        // Avatar blendshapes to set while this outfit is worn.
+        public List<WardrobePiece> pieces = new List<WardrobePiece>();
         public List<BlendshapeOverride> blendshapes = new List<BlendshapeOverride>();
-
-        // Objects elsewhere in the avatar forced on or off while this outfit
-        // is worn — e.g. underwear an outfit needs (on) or a bandage a tight
-        // outfit clips through (off).
         public List<ObjectOverride> objectOverrides = new List<ObjectOverride>();
 
         public OutfitMenuMode menuMode = OutfitMenuMode.Absorb;
 
-        // Color / material variants. The first entry is the default; an empty
-        // list means the outfit has no variants.
-        public List<OutfitVariant> variants = new List<OutfitVariant>();
+        public List<ColorSlot> colorSlots = new List<ColorSlot>();
+        public List<OutfitColor> colors = new List<OutfitColor>();
 
         public OutfitPlatform platform = OutfitPlatform.All;
 
-        public PieceSettings FindPiece(GameObject piece)
+        public WardrobePiece FindPiece(GameObject target)
         {
-            if (pieceSettings == null) return null;
-            foreach (var p in pieceSettings)
-                if (p != null && p.target == piece) return p;
+            foreach (var p in pieces)
+                if (p != null && p.target == target) return p;
             return null;
         }
     }
@@ -118,47 +128,45 @@ namespace TsiYuki.Wardrobe
     [Serializable]
     public class LookPiece
     {
-        public GameObject piece;
+        public string pieceId = "";
         public bool on = true;
     }
 
-    // A one-click combination of an outfit and its piece toggles.
+    // A one-click combination of an outfit and its piece toggles. Pieces a
+    // look doesn't list go back to their defaults.
     [Serializable]
     public class WardrobeLook
     {
         public string displayName = "";
         public Texture2D icon;
-        public GameObject outfit;
+        public string entryId = "";
         public List<LookPiece> pieces = new List<LookPiece>();
     }
 
-    // One wardrobe menu for an avatar. Place it anywhere inside the avatar
-    // hierarchy; several wardrobes (e.g. "Outfits" and "Hair") may coexist,
-    // each becoming its own top-level menu. The build-time plugin consumes
-    // it and removes it, so nothing here survives into the uploaded avatar.
+    // One wardrobe menu for an avatar. Place it anywhere inside the avatar;
+    // several wardrobes (for example Outfits and Hair) may coexist, each
+    // becoming its own top-level menu. The build-time plugin consumes it and
+    // removes it, so nothing here survives into the uploaded avatar.
     [AddComponentMenu("TsiYuki/Yuki Wardrobe")]
     [DisallowMultipleComponent]
     public class YukiWardrobe : MonoBehaviour, IEditorOnly
     {
-        // Order matters: the first outfit is the default worn at spawn and
-        // the fallback when a menu toggle is switched off.
-        public List<OutfitGroup> outfits = new List<OutfitGroup>();
+        // Top-level menu label; empty uses the object name.
+        public string displayName = "";
+        public Texture2D icon;
 
-        // Adds a "None" (nothing worn) option to the menu.
-        public bool includeNone = false;
-        public string noneLabel = "";
-        public Texture2D noneIcon;
-
-        // Synced int parameter. Empty generates a unique name from the
-        // object name. Wardrobes made with 2.x keep "WardrobeState".
+        // Synced int parameter. Empty generates "Wardrobe/<id>".
         public string parameterName = "";
+        public string id = "";
 
-        // Label of the top-level menu; empty uses the object name.
-        public string menuName = "";
-        public Texture2D menuIcon;
-
-        // Whether parameter values persist across worlds/sessions.
+        // Whether selections persist across worlds and sessions.
         public bool saved = true;
+
+        // Menu order. Values are stable, the order is only presentation.
+        public List<WardrobeEntry> entries = new List<WardrobeEntry>();
+
+        // Entry worn at spawn and when a menu toggle is switched off.
+        public string defaultEntry = "";
 
         public List<WardrobeLook> looks = new List<WardrobeLook>();
 
@@ -166,5 +174,101 @@ namespace TsiYuki.Wardrobe
         // time the outfit changes. Keep it disabled in the scene.
         public GameObject changeEffect;
         [Range(0.1f, 5f)] public float changeEffectDuration = 1f;
+
+        // Next int value handed to a new entry.
+        public int nextValue = 1;
+
+        public WardrobeEntry FindEntry(string entryId)
+        {
+            foreach (var e in entries)
+                if (e != null && e.id == entryId) return e;
+            return null;
+        }
+
+        public WardrobeEntry DefaultEntry
+        {
+            get
+            {
+                var entry = FindEntry(defaultEntry);
+                if (entry != null) return entry;
+                foreach (var e in entries)
+                    if (e != null && (e.kind == EntryKind.None || e.root != null)) return e;
+                return null;
+            }
+        }
+
+        public WardrobePiece FindPiece(string pieceId)
+        {
+            foreach (var e in entries)
+                if (e != null)
+                    foreach (var p in e.pieces)
+                        if (p != null && p.id == pieceId) return p;
+            return null;
+        }
+
+        /// <summary>
+        /// Gives every entry, piece and the wardrobe a stable id and every entry
+        /// a unique non-zero value. Returns true when anything changed.
+        /// </summary>
+        public bool EnsureIds()
+        {
+            bool changed = false;
+            if (string.IsNullOrEmpty(id)) { id = NewId(); changed = true; }
+            if (nextValue < 1) { nextValue = 1; changed = true; }
+
+            var ids = new HashSet<string>();
+            var values = new HashSet<int>();
+            foreach (var e in entries)
+            {
+                if (e == null) continue;
+                if (string.IsNullOrEmpty(e.id) || !ids.Add(e.id)) { e.id = Unique(ids); changed = true; }
+                if (e.value <= 0 || e.value > 255 || !values.Add(e.value))
+                {
+                    while (values.Contains(nextValue) || nextValue <= 0) nextValue++;
+                    e.value = nextValue++;
+                    values.Add(e.value);
+                    changed = true;
+                }
+                if (e.value >= nextValue) { nextValue = e.value + 1; changed = true; }
+            }
+
+            var pieceIds = new HashSet<string>();
+            foreach (var e in entries)
+            {
+                if (e == null) continue;
+                foreach (var p in e.pieces)
+                    if (p != null && (string.IsNullOrEmpty(p.id) || !pieceIds.Add(p.id))) { p.id = Unique(pieceIds); changed = true; }
+                // Colors always have one material per slot.
+                foreach (var c in e.colors)
+                {
+                    if (c == null) continue;
+                    while (c.materials.Count < e.colorSlots.Count) { c.materials.Add(null); changed = true; }
+                    while (c.materials.Count > e.colorSlots.Count) { c.materials.RemoveAt(c.materials.Count - 1); changed = true; }
+                }
+            }
+            return changed;
+        }
+
+        public static string NewId() => Guid.NewGuid().ToString("N").Substring(0, 6);
+
+        static string Unique(HashSet<string> used)
+        {
+            string candidate;
+            do candidate = NewId(); while (!used.Add(candidate));
+            return candidate;
+        }
+
+#if UNITY_EDITOR
+        void OnValidate()
+        {
+            if (EnsureIds()) UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        void Reset()
+        {
+            id = NewId();
+            nextValue = 1;
+        }
+#endif
     }
 }

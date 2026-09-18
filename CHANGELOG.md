@@ -29,8 +29,14 @@
 - All piece toggles share one Direct Blend Tree layer instead of one layer each.
 - Warnings go to NDMF's error report.
 
-### Compatibility
-- 2.x components load unchanged: existing outfits, pieces, overrides and the `WardrobeState` parameter are kept.
+### Changed data model (not compatible with 2.x)
+- Entries have fixed parameter values: reordering the menu or changing the default no longer shifts saved
+  selections. Value 0 means "the default entry", which is also what a switched-off toggle falls back to.
+- The default entry is chosen explicitly instead of being the first in the list.
+- Pieces, colors and wardrobes use generated ids in parameter names, so renaming objects or labels keeps saved values.
+- Pieces are one list (target, name, icon); "None" is a normal entry that can sit anywhere in the menu.
+- Colors are a table: the slots that change, and one material per slot for each color.
+- One display name for the wardrobe menu (empty = object name).
 
 ## [2.0.0] - 2026-07-15
 

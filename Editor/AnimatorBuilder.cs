@@ -12,7 +12,7 @@ namespace TsiYuki.Wardrobe.Editor
     // Builds the FX controller for one wardrobe:
     //  - an exclusive-switch layer driven by the int parameter,
     //  - one Direct Blend Tree layer holding every piece toggle,
-    //  - one layer per outfit with color variants,
+    //  - one layer per outfit with colors,
     //  - a local-only layer that applies Looks through parameter drivers.
     // Everything is created in memory; the caller persists each object
     // through the callback so play mode and upload can serialize it.
@@ -31,26 +31,26 @@ namespace TsiYuki.Wardrobe.Editor
             controller.AddParameter(model.ParameterName, AnimatorControllerParameterType.Int);
             BuildOutfitLayer(controller, model, persist);
 
-            var elements = model.AllElements.ToList();
-            if (elements.Count > 0)
+            var pieces = model.AllPieces.ToList();
+            if (pieces.Count > 0)
             {
                 controller.AddParameter(new AnimatorControllerParameter { name = OneParameter, type = AnimatorControllerParameterType.Float, defaultFloat = 1 });
                 // Pieces are synced bools; VRChat feeds them to Float animator
                 // parameters, which blend trees need.
-                foreach (var element in elements)
+                foreach (var piece in pieces)
                     controller.AddParameter(new AnimatorControllerParameter
                     {
-                        name = element.ParameterName,
+                        name = piece.ParameterName,
                         type = AnimatorControllerParameterType.Float,
-                        defaultFloat = element.DefaultOn ? 1 : 0,
+                        defaultFloat = piece.DefaultOn ? 1 : 0,
                     });
-                BuildPieceLayer(controller, model, elements, persist);
+                BuildPieceLayer(controller, model, pieces, persist);
             }
 
-            foreach (var outfit in model.Outfits.Where(o => o.VariantParameter != null))
+            foreach (var outfit in model.Entries.Where(o => o.ColorParameter != null))
             {
-                controller.AddParameter(outfit.VariantParameter, AnimatorControllerParameterType.Int);
-                BuildVariantLayer(controller, outfit, persist);
+                controller.AddParameter(outfit.ColorParameter, AnimatorControllerParameterType.Int);
+                BuildColorLayer(controller, outfit, persist);
             }
 
             if (model.Looks.Count > 0)
@@ -67,37 +67,32 @@ namespace TsiYuki.Wardrobe.Editor
         static void BuildOutfitLayer(AnimatorController controller, WardrobeModel model, Action<UnityEngine.Object> persist)
         {
             var sm = AddLayer(controller, model.ParameterName, persist);
-
-            var states = new List<(int index, AnimatorState state)>();
-            if (model.IncludeNone)
+            int y = 0;
+            foreach (var entry in model.Entries)
             {
-                var noneClip = BuildOutfitClip(model, null);
-                persist(noneClip);
-                states.Add((model.NoneIndex, AddState(sm, "None", noneClip, new Vector3(400, 0), persist)));
-            }
-
-            int y = 80;
-            foreach (var outfit in model.Outfits)
-            {
-                var clip = BuildOutfitClip(model, outfit);
+                var clip = BuildOutfitClip(model, entry.IsNone ? null : entry);
                 persist(clip);
-                states.Add((outfit.Index, AddState(sm, outfit.Key, clip, new Vector3(400, y), persist)));
+                var state = AddState(sm, entry.IsNone ? "None" : entry.DisplayName, clip, new Vector3(400, y), persist);
                 y += 60;
-            }
 
-            // Index 0 is what the synced parameter defaults to, so the state
-            // machine must start there too.
-            sm.defaultState = states.Find(s => s.index == 0).state ?? states[0].state;
-
-            foreach (var (index, state) in states)
-            {
-                var transition = sm.AddAnyStateTransition(state);
-                transition.canTransitionToSelf = false;
-                transition.hasExitTime = false;
-                transition.duration = 0;
-                transition.AddCondition(AnimatorConditionMode.Equals, index, model.ParameterName);
-                persist(transition);
+                AddEnter(sm, state, entry.Value, model.ParameterName, persist);
+                if (entry.IsDefault)
+                {
+                    // 0 (the synced default, and a switched-off toggle) wears the default entry.
+                    sm.defaultState = state;
+                    AddEnter(sm, state, 0, model.ParameterName, persist);
+                }
             }
+        }
+
+        static void AddEnter(AnimatorStateMachine sm, AnimatorState state, int value, string parameter, Action<UnityEngine.Object> persist)
+        {
+            var transition = sm.AddAnyStateTransition(state);
+            transition.canTransitionToSelf = false;
+            transition.hasExitTime = false;
+            transition.duration = 0;
+            transition.AddCondition(AnimatorConditionMode.Equals, value, parameter);
+            persist(transition);
         }
 
         /// <summary>The pose of one outfit (or None when <paramref name="worn"/> is null).</summary>
@@ -133,7 +128,7 @@ namespace TsiYuki.Wardrobe.Editor
 
         // ------------------------------------------------------------- pieces
 
-        static void BuildPieceLayer(AnimatorController controller, WardrobeModel model, List<ResolvedElement> elements, Action<UnityEngine.Object> persist)
+        static void BuildPieceLayer(AnimatorController controller, WardrobeModel model, List<ResolvedPiece> elements, Action<UnityEngine.Object> persist)
         {
             var sm = AddLayer(controller, model.ParameterName + "/Pieces", persist);
 
@@ -179,35 +174,27 @@ namespace TsiYuki.Wardrobe.Editor
             sm.defaultState = state;
         }
 
-        // ----------------------------------------------------------- variants
+        // ------------------------------------------------------------- colors
 
-        static void BuildVariantLayer(AnimatorController controller, ResolvedOutfit outfit, Action<UnityEngine.Object> persist)
+        static void BuildColorLayer(AnimatorController controller, ResolvedOutfit outfit, Action<UnityEngine.Object> persist)
         {
-            var sm = AddLayer(controller, outfit.VariantParameter, persist);
-            AnimatorState first = null;
+            var sm = AddLayer(controller, outfit.ColorParameter, persist);
             int y = 0;
-            foreach (var variant in outfit.Variants)
+            foreach (var color in outfit.Colors)
             {
-                var clip = new AnimationClip { name = $"{outfit.DisplayName} {variant.DisplayName}" };
-                foreach (var (path, type, slot, material) in variant.Materials)
+                var clip = new AnimationClip { name = $"{outfit.DisplayName} {color.DisplayName}" };
+                foreach (var (path, type, slot, material) in color.Materials)
                 {
                     var binding = EditorCurveBinding.PPtrCurve(path, type, $"m_Materials.Array.data[{slot}]");
                     AnimationUtility.SetObjectReferenceCurve(clip, binding, new[] { new ObjectReferenceKeyframe { time = 0, value = material } });
                 }
                 persist(clip);
 
-                var state = AddState(sm, $"Variant {variant.Index}", clip, new Vector3(400, y), persist);
+                var state = AddState(sm, color.DisplayName, clip, new Vector3(400, y), persist);
                 y += 60;
-                if (first == null) first = state;
-
-                var transition = sm.AddAnyStateTransition(state);
-                transition.canTransitionToSelf = false;
-                transition.hasExitTime = false;
-                transition.duration = 0;
-                transition.AddCondition(AnimatorConditionMode.Equals, variant.Index, outfit.VariantParameter);
-                persist(transition);
+                if (color.Index == 0) sm.defaultState = state;
+                AddEnter(sm, state, color.Index, outfit.ColorParameter, persist);
             }
-            sm.defaultState = first;
         }
 
         // -------------------------------------------------------------- looks
@@ -228,18 +215,13 @@ namespace TsiYuki.Wardrobe.Editor
                 driver.localOnly = true;
                 driver.parameters = new List<VRC_AvatarParameterDriver.Parameter>
                 {
-                    new VRC_AvatarParameterDriver.Parameter { type = VRC_AvatarParameterDriver.ChangeType.Set, name = model.ParameterName, value = look.OutfitIndex },
+                    new VRC_AvatarParameterDriver.Parameter { type = VRC_AvatarParameterDriver.ChangeType.Set, name = model.ParameterName, value = look.EntryValue },
                 };
                 foreach (var (parameter, on) in look.Pieces)
                     driver.parameters.Add(new VRC_AvatarParameterDriver.Parameter { type = VRC_AvatarParameterDriver.ChangeType.Set, name = parameter, value = on ? 1 : 0 });
                 persist(driver);
 
-                var enter = sm.AddAnyStateTransition(state);
-                enter.canTransitionToSelf = false;
-                enter.hasExitTime = false;
-                enter.duration = 0;
-                enter.AddCondition(AnimatorConditionMode.Equals, look.Value, model.LookParameter);
-                persist(enter);
+                AddEnter(sm, state, look.Value, model.LookParameter, persist);
 
                 var back = state.AddTransition(idle);
                 back.hasExitTime = false;

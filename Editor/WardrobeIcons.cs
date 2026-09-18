@@ -91,6 +91,9 @@ namespace TsiYuki.Wardrobe.Editor
             }
         }
 
+        static string FileName(string name) =>
+            System.Text.RegularExpressions.Regex.Replace(string.IsNullOrEmpty(name) ? "Unnamed" : name, @"[^\w\-]", "_");
+
         static void ApplyPose(GameObject root, AnimationClip clip)
         {
             foreach (var binding in AnimationUtility.GetCurveBindings(clip))
@@ -111,9 +114,9 @@ namespace TsiYuki.Wardrobe.Editor
 
         static Texture2D Save(Transform avatarRoot, WardrobeModel model, ResolvedOutfit outfit, Texture2D texture)
         {
-            var folder = $"{Folder}/{WardrobeModel.Sanitize(avatarRoot.name)}";
+            var folder = $"{Folder}/{FileName(avatarRoot.name)}";
             Directory.CreateDirectory(folder);
-            var path = $"{folder}/{WardrobeModel.Sanitize(model.MenuName)}_{outfit.Key}.png";
+            var path = $"{folder}/{FileName(model.MenuName)}_{outfit.Id}.png";
 
             File.WriteAllBytes(path, texture.EncodeToPNG());
             Object.DestroyImmediate(texture);

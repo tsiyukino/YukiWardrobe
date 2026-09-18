@@ -35,7 +35,6 @@ namespace TsiYuki.Wardrobe.Editor
 
             var objects = new Dictionary<GameObject, List<Owner>>();
             var shapes = new Dictionary<(SkinnedMeshRenderer, string), List<Owner>>();
-            var slots = new Dictionary<(Renderer, int), List<Owner>>();
 
             void AddObject(GameObject go, WardrobeModel m, string what)
             {
@@ -49,14 +48,7 @@ namespace TsiYuki.Wardrobe.Editor
                 foreach (var outfit in model.Outfits)
                 {
                     AddObject(outfit.Root, model, outfit.DisplayName);
-                    foreach (var e in outfit.Elements) AddObject(e.Target, model, e.DisplayName);
-                    foreach (var v in outfit.Source.variants.SelectMany(x => x.materials))
-                        if (v != null && v.renderer != null)
-                        {
-                            var key = (v.renderer, v.slot);
-                            if (!slots.TryGetValue(key, out var l)) slots[key] = l = new List<Owner>();
-                            if (!l.Any(o => o.Model == model && o.What == outfit.DisplayName)) l.Add(new Owner { Model = model, What = outfit.DisplayName });
-                        }
+                    foreach (var e in outfit.Pieces) AddObject(e.Target, model, e.DisplayName);
                 }
                 foreach (var c in model.ObjectChannels) AddObject(c.Target, model, c.Target.name);
                 if (model.Config.changeEffect != null) AddObject(model.Config.changeEffect, model, model.Config.changeEffect.name);

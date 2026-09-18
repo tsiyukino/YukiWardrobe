@@ -31,9 +31,9 @@ namespace TsiYuki.Wardrobe.Editor
             if (model != null)
             {
                 EditorGUILayout.LabelField(model.MenuName, YukiGUI.SectionHeaderStyle);
-                EditorGUILayout.LabelField(L.Tr("ui.summary_text", model.Outfits.Count, model.AllElements.Count(), model.Looks.Count, model.TotalBits), YukiGUI.WrapMini);
-                foreach (var outfit in model.Outfits)
-                    EditorGUILayout.LabelField("• " + outfit.DisplayName + (outfit.Index == 0 ? "  (" + L["ui.badge.default"] + ")" : ""), EditorStyles.miniLabel);
+                EditorGUILayout.LabelField(L.Tr("ui.summary_text", model.Outfits.Count(), model.AllPieces.Count(), model.Looks.Count, model.TotalBits), YukiGUI.WrapMini);
+                foreach (var outfit in model.Entries)
+                    EditorGUILayout.LabelField("• " + outfit.DisplayName + (outfit.IsDefault ? "  (" + L["ui.badge.default"] + ")" : ""), EditorStyles.miniLabel);
                 foreach (var warning in model.Warnings)
                     EditorGUILayout.HelpBox(warning.Message, MessageType.Warning);
             }

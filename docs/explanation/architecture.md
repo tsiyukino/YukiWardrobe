@@ -16,6 +16,6 @@ Data lives only in `YukiWardrobe` components (Runtime). Everything else is edito
 | `Editor/WardrobeIcons.cs` | Renders outfit icons from a posed copy in a preview scene. |
 | `Editor/WardrobeActions.cs` | Outfit import (MA Setup Outfit), shrink-blendshape suggestions, toggle-to-piece conversion, parameter budget. |
 
-Parameters: `<param>` (int, outfit), `<param>/<outfit>/<piece>` (bool), `<param>/<outfit>/Variant` (int),
-`<param>/Look` (int, local only). `<param>` is `WardrobeState` for 2.x wardrobes and `Wardrobe/<object name>`
-for new ones unless set explicitly.
+Parameters: `<param>` (int; each entry has a fixed value, 0 = default entry), `<param>/<pieceId>` (bool),
+`<param>/<entryId>/Color` (int), `<param>/Look` (int, local only). `<param>` is `Wardrobe/<wardrobe id>` unless
+set explicitly. Ids and values are assigned by `YukiWardrobe.EnsureIds()` and never derived from names or order.
