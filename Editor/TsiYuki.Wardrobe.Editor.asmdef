@@ -3,7 +3,10 @@
     "rootNamespace": "TsiYuki.Wardrobe.Editor",
     "references": [
         "TsiYuki.Wardrobe",
+        "TsiYuki.Core.Editor",
         "nadena.dev.ndmf",
+        "nadena.dev.ndmf.runtime",
+        "nadena.dev.ndmf.vrchat",
         "nadena.dev.modular-avatar.core",
         "VRC.SDKBase",
         "VRC.SDK3A"

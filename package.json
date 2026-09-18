@@ -1,9 +1,9 @@
 {
   "name": "moe.tsiyuki.wardrobe",
   "displayName": "Yuki Wardrobe",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "unity": "2022.3",
-  "description": "Outfit switcher for VRChat avatars: exclusive outfit switching with optional per-piece toggles, generated non-destructively at build time through NDMF and Modular Avatar.",
+  "description": "Outfit and hair switcher for VRChat avatars: exclusive outfits with piece toggles, colors and looks, absorbs outfit menus, generated non-destructively at build time through NDMF and Modular Avatar.",
   "author": {
     "name": "TsiYuki",
     "url": "https://github.com/tsiyukino"
@@ -12,8 +12,17 @@
   "documentationUrl": "https://github.com/tsiyukino/YukiWardrobe",
   "changelogUrl": "https://github.com/tsiyukino/YukiWardrobe/blob/main/CHANGELOG.md",
   "vpmDependencies": {
-    "com.vrchat.avatars": ">=3.5.0",
-    "nadena.dev.ndmf": ">=1.6.0",
-    "nadena.dev.modular-avatar": ">=1.10.0"
-  }
+    "com.vrchat.avatars": ">=3.7.0",
+    "nadena.dev.ndmf": ">=1.11.0 <2.0.0",
+    "nadena.dev.modular-avatar": ">=1.12.0 <2.0.0",
+    "moe.tsiyuki.core": ">=0.1.0"
+  },
+  "keywords": [
+    "vrchat",
+    "wardrobe",
+    "outfit",
+    "modular-avatar",
+    "ndmf",
+    "non-destructive"
+  ]
 }
