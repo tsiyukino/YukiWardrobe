@@ -1,9 +1,4 @@
 # Yuki Wardrobe — 简体中文
-menu.none = 不穿
-menu.wear = 穿上
-menu.looks = 造型
-menu.variants = 颜色
-menu.variant_n = 颜色 {0}
 
 ui.avatar = 模型
 ui.pick_avatar = 请选择一个模型（或选中模型里的任意物体）。
@@ -94,7 +89,7 @@ ui.variants.help = 这套衣服的颜色。先选出会变化的材质槽，再�
 ui.add_variant = 添加颜色
 ui.add_material = 添加材质槽
 ui.variant_original = 原色
-ui.looks.help = 造型是“一套衣服 + 单件开关”的一键组合，出现在“造型”子菜单里，不占用同步参数。
+ui.looks.help = 造型是“一套衣服 + 单件开关”的一键组合，出现在菜单的“Looks”子菜单里，不占用同步参数。
 ui.add_look = 添加造型
 ui.look_n = 造型 {0}
 ui.menu_preview.help = 这个模型上的衣柜将生成的菜单，包括被吸收进来的衣服自带菜单。
@@ -116,13 +111,13 @@ conflict.ma_toggle = “{0}”同时被衣柜和 {1} 控制，会互相冲突。
 conflict.ma_shape = Blendshape {0} 同时被衣柜和 {1} 设置。
 conflict.animator = “{0}”同时被衣柜和动画控制器“{1}”控制。
 
-ui.add_none = 添加“不穿”选项
+ui.add_none = 添加“不穿”（None）选项
 ui.default_entry = 默认
 ui.default_entry.tip = 进入世界时和关掉菜单开关时穿的那一项。
 ui.set_default = 设为默认
 ui.entry_value = 参数值 {0}（固定不变，调整顺序不影响已保存的选择）
 ui.color_slots = 会变化的槽
 ui.colors = 颜色
-warn.duplicate_none = 只使用一个“不穿”选项，其余已跳过。
+warn.duplicate_none = 只使用一个“不穿”（None）选项，其余已跳过。
 warn.missing_root = 衣服“{0}”没有指定物体，已跳过。
 warn.duplicate_parameter = 参数“{0}”被多个衣柜使用，请给其中一个改名。

@@ -37,8 +37,8 @@ namespace TsiYuki.Wardrobe.Editor
 
             if (model.Looks.Count > 0)
             {
-                var looks = Child(root.transform, WardrobeText.L["menu.looks"]);
-                SubMenu(looks, WardrobeText.L["menu.looks"], null);
+                var looks = Child(root.transform, MenuText.Looks);
+                SubMenu(looks, MenuText.Looks, null);
                 foreach (var look in model.Looks)
                     Item(looks.transform, look.DisplayName, look.Icon, VRCExpressionsMenu.Control.ControlType.Button, model.LookParameter, look.Value);
             }
@@ -55,15 +55,15 @@ namespace TsiYuki.Wardrobe.Editor
 
             var menu = Child(parent, outfit.DisplayName);
             SubMenu(menu, outfit.DisplayName, outfit.Icon);
-            Toggle(menu.transform, WardrobeText.L["menu.wear"], outfit.Icon, model.ParameterName, outfit.Value);
+            Toggle(menu.transform, MenuText.Wear, outfit.Icon, model.ParameterName, outfit.Value);
 
             foreach (var piece in outfit.Pieces)
                 Toggle(menu.transform, piece.DisplayName, piece.Icon, piece.ParameterName, 1);
 
             if (outfit.ColorParameter != null)
             {
-                var colors = Child(menu.transform, WardrobeText.L["menu.variants"]);
-                SubMenu(colors, WardrobeText.L["menu.variants"], null);
+                var colors = Child(menu.transform, MenuText.Colors);
+                SubMenu(colors, MenuText.Colors, null);
                 foreach (var color in outfit.Colors)
                     Toggle(colors.transform, color.DisplayName, color.Icon, outfit.ColorParameter, color.Index);
             }

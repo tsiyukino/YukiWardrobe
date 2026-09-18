@@ -178,7 +178,7 @@ namespace TsiYuki.Wardrobe.Editor
                         Id = entry.id,
                         Value = entry.value,
                         IsNone = true,
-                        DisplayName = Fallback(entry.displayName, WardrobeText.L["menu.none"]),
+                        DisplayName = Fallback(entry.displayName, MenuText.None),
                         Icon = entry.icon,
                         Category = (entry.category ?? "").Trim(),
                     });
@@ -325,7 +325,7 @@ namespace TsiYuki.Wardrobe.Editor
                 var color = entry.colors[c];
                 var resolved = new ResolvedColor
                 {
-                    DisplayName = Fallback(color.displayName, WardrobeText.L.Tr("menu.variant_n", c + 1)),
+                    DisplayName = Fallback(color.displayName, MenuText.ColorN(c + 1)),
                     Icon = color.icon,
                     Index = c,
                 };

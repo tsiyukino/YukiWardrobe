@@ -316,7 +316,7 @@ namespace TsiYuki.Wardrobe.Editor
             var icon = entry.icon != null ? (Texture)entry.icon : EditorGUIUtility.IconContent(isNone ? "d_winbtn_win_close" : "Prefab Icon").image;
             GUI.DrawTexture(iconRect, icon, ScaleMode.ScaleToFit);
 
-            string name = isNone ? WardrobeModel.Fallback(entry.displayName, L["menu.none"])
+            string name = isNone ? WardrobeModel.Fallback(entry.displayName, MenuText.None)
                 : entry.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(entry.displayName, entry.root.name);
             GUI.Label(new Rect(iconRect.xMax + 6, rect.y + 3, rect.width - 80, 18), name, EditorStyles.boldLabel);
 
@@ -446,7 +446,7 @@ namespace TsiYuki.Wardrobe.Editor
         }
 
         string EntryName(WardrobeEntry e) =>
-            e.kind == EntryKind.None ? WardrobeModel.Fallback(e.displayName, L["menu.none"])
+            e.kind == EntryKind.None ? WardrobeModel.Fallback(e.displayName, MenuText.None)
             : e.root == null ? L["ui.missing_object"] : WardrobeModel.Fallback(e.displayName, e.root.name);
 
         // ------------------------------------------------------------ outfit
@@ -988,7 +988,7 @@ namespace TsiYuki.Wardrobe.Editor
             }
             if (model.Looks.Count > 0)
             {
-                var looks = new MenuNode { Label = WardrobeText.L["menu.looks"], Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
+                var looks = new MenuNode { Label = MenuText.Looks, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
                 foreach (var look in model.Looks)
                     looks.Children.Add(new MenuNode { Label = look.DisplayName, Type = VRCExpressionsMenu.Control.ControlType.Button, Parameter = $"{model.LookParameter} = {look.Value}" });
                 root.Children.Add(looks);
@@ -1001,12 +1001,12 @@ namespace TsiYuki.Wardrobe.Editor
             var label = outfit.IsDefault ? outfit.DisplayName + " ★" : outfit.DisplayName;
             if (!outfit.HasSubmenu) return Toggle(label, model.ParameterName, outfit.Value);
             var node = new MenuNode { Label = label, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
-            node.Children.Add(Toggle(WardrobeText.L["menu.wear"], model.ParameterName, outfit.Value));
+            node.Children.Add(Toggle(MenuText.Wear, model.ParameterName, outfit.Value));
             foreach (var e in outfit.Pieces)
                 node.Children.Add(new MenuNode { Label = e.DisplayName, Type = VRCExpressionsMenu.Control.ControlType.Toggle, Parameter = e.ParameterName, IsDefault = e.DefaultOn });
             if (outfit.ColorParameter != null)
             {
-                var colors = new MenuNode { Label = WardrobeText.L["menu.variants"], Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
+                var colors = new MenuNode { Label = MenuText.Colors, Type = VRCExpressionsMenu.Control.ControlType.SubMenu };
                 foreach (var v in outfit.Colors) colors.Children.Add(Toggle(v.DisplayName, outfit.ColorParameter, v.Index));
                 node.Children.Add(colors);
             }

@@ -1,9 +1,4 @@
 # Yuki Wardrobe — 日本語
-menu.none = なし
-menu.wear = 着る
-menu.looks = コーデ
-menu.variants = カラー
-menu.variant_n = カラー {0}
 
 ui.avatar = アバター
 ui.pick_avatar = アバター（またはその中のオブジェクト）を選択してください。
@@ -94,7 +89,7 @@ ui.variants.help = この衣装のカラー。まず変わるマテリアルス�
 ui.add_variant = カラーを追加
 ui.add_material = スロットを追加
 ui.variant_original = オリジナル
-ui.looks.help = コーデは「衣装＋パーツトグル」をワンタッチで切り替える組み合わせです。「コーデ」サブメニューに表示され、同期パラメーターを使いません。
+ui.looks.help = コーデは「衣装＋パーツトグル」をワンタッチで切り替える組み合わせです。メニューの「Looks」サブメニューに表示され、同期パラメーターを使いません。
 ui.add_look = コーデを追加
 ui.look_n = コーデ {0}
 ui.menu_preview.help = このアバターの衣装棚が生成するメニューです。取り込まれる衣装付属メニューも含みます。
@@ -116,7 +111,7 @@ conflict.ma_toggle = 「{0}」は衣装棚と {1} の両方から切り替えら
 conflict.ma_shape = シェイプキー {0} は衣装棚と {1} の両方から設定されています。
 conflict.animator = 「{0}」は衣装棚とアニメーター「{1}」の両方から制御されています。
 
-ui.add_none = 「なし」を追加
+ui.add_none = 「なし」（None）を追加
 ui.default_entry = デフォルト
 ui.default_entry.tip = 入室時とメニューのトグルをオフにしたときに着用する項目。
 ui.set_default = デフォルトにする

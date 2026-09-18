@@ -1,9 +1,4 @@
 # Yuki Wardrobe — English
-menu.none = None
-menu.wear = Wear
-menu.looks = Looks
-menu.variants = Colors
-menu.variant_n = Color {0}
 
 ui.avatar = Avatar
 ui.pick_avatar = Pick an avatar (or select any object inside one).
