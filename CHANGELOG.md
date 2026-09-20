@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — 3.0.0
+## [3.0.0] - 2026-09-21
 
 ### Added
 - **Absorbs outfit menus.** Modular Avatar menus that ship inside an outfit (for example a "Cloth Change"
