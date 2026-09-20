@@ -33,7 +33,7 @@ namespace TsiYuki.Wardrobe.Editor
             if (outfit == null) return;
 
             Stop();
-            var clip = BuildPose(model, outfit.IsNone ? null : outfit, color);
+            var clip = BuildPose(model, outfit, color);
             AnimationMode.StartAnimationMode();
             AnimationMode.BeginSampling();
             Apply(avatarRoot, clip);

@@ -548,14 +548,16 @@ namespace TsiYuki.Wardrobe.Editor
                 }
             }
 
-            if (isNone)
-            {
-                DrawGeneral(config, entry);
-                return;
-            }
-
-            var tabs = System.Enum.GetValues(typeof(OutfitTab)).Cast<OutfitTab>().Select(t => new GUIContent(TabLabel(t, entry, resolved))).ToArray();
-            tab = (OutfitTab)GUILayout.Toolbar((int)tab, tabs);
+            // Pieces and shipped menus both come from the outfit's root object,
+            // which None does not have; everything else applies to it as it does
+            // to any other entry.
+            var tabs = System.Enum.GetValues(typeof(OutfitTab)).Cast<OutfitTab>()
+                .Where(t => !isNone || (t != OutfitTab.Pieces && t != OutfitTab.Menus))
+                .ToList();
+            int current = tabs.IndexOf(tab);
+            if (current < 0) current = 0;
+            var labels = tabs.Select(t => new GUIContent(TabLabel(t, entry, resolved))).ToArray();
+            tab = tabs[GUILayout.Toolbar(current, labels)];
             EditorGUILayout.Space(4);
 
             switch (tab)
@@ -881,7 +883,9 @@ namespace TsiYuki.Wardrobe.Editor
             if (GUILayout.Button(L["ui.add_material"], GUILayout.Width(140)))
             {
                 UndoEdit.Begin(config, "Add color slot");
-                var renderer = entry.root != null ? entry.root.GetComponentInChildren<Renderer>(true) : null;
+                var renderer = entry.root != null
+                    ? entry.root.GetComponentInChildren<Renderer>(true)
+                    : avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "Body" || r.name == "Body_base");
                 entry.colorSlots.Add(new ColorSlot { renderer = renderer });
                 foreach (var c in entry.colors) c.materials.Add(renderer != null && renderer.sharedMaterials.Length > 0 ? renderer.sharedMaterials[0] : null);
                 UndoEdit.End(config);
@@ -908,7 +912,7 @@ namespace TsiYuki.Wardrobe.Editor
                             UndoEdit.End(config);
                         }
                         if (v == 0) GUILayout.Label(L["ui.badge.default"], EditorStyles.miniBoldLabel, GUILayout.Width(50));
-                        if (entry.root != null && GUILayout.Button(L["ui.try_on"], EditorStyles.miniButton, GUILayout.Width(70)))
+                        if ((entry.root != null || entry.kind == EntryKind.None) && GUILayout.Button(L["ui.try_on"], EditorStyles.miniButton, GUILayout.Width(70)))
                             WardrobePreview.Show(avatar.transform, config, entry, v);
                         if (GUILayout.Button("×", GUILayout.Width(22))) removeColor = color;
                     }

@@ -172,7 +172,7 @@ namespace TsiYuki.Wardrobe.Editor
                 {
                     if (hasNone) continue;
                     hasNone = true;
-                    model.Entries.Add(new ResolvedOutfit
+                    var none = new ResolvedOutfit
                     {
                         Source = entry,
                         Id = entry.id,
@@ -181,7 +181,14 @@ namespace TsiYuki.Wardrobe.Editor
                         DisplayName = Fallback(entry.displayName, MenuText.None),
                         Icon = entry.icon,
                         Category = (entry.category ?? "").Trim(),
-                    });
+                    };
+                    // None has no root of its own, so no pieces and no shipped
+                    // menus, but it still sets body shapes, other objects and
+                    // colors while it is worn, exactly like an outfit does.
+                    ResolveBlendshapes(entry, none, model, avatarRoot, channels);
+                    ResolveObjectOverrides(entry, none, model, avatarRoot, roots, objectChannels);
+                    ResolveColors(entry, none, model, avatarRoot);
+                    model.Entries.Add(none);
                     continue;
                 }
                 if (entry.root == null || !roots.Contains(entry.root.transform)) continue;

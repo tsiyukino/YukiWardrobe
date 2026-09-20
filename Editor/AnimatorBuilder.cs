@@ -70,7 +70,7 @@ namespace TsiYuki.Wardrobe.Editor
             int y = 0;
             foreach (var entry in model.Entries)
             {
-                var clip = BuildOutfitClip(model, entry.IsNone ? null : entry);
+                var clip = BuildOutfitClip(model, entry);
                 persist(clip);
                 var state = AddState(sm, entry.IsNone ? "None" : entry.DisplayName, clip, new Vector3(400, y), persist);
                 y += 60;

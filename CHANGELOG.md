@@ -21,6 +21,9 @@
   blendshape suggestions for hiding skin under clothes.
 - **Colors / material variants** per outfit, **PC-only / mobile-only** outfits, an optional **change
   effect** object, and **conversion of an outfit's simple MA toggles into wardrobe pieces**.
+- **"None" is configurable like any other entry**: body blendshapes, object overrides and colors now have
+  their own tabs on it and are applied while it is worn (Pieces and Menus stay hidden, since both come from
+  an outfit's root object, which None has none of).
 - New two-pane editor window with menu preview; English, Chinese and Japanese UI (TsiYuki > Language).
 - NDMF parameter provider, so MA / NDMF tools see the wardrobe's parameters before the build.
 
