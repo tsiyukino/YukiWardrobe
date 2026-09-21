@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0] - 2026-09-22
+
+### Added
+- **Install into** on the wardrobe: which menu it appears in, instead of always the avatar's root menu.
+  Takes a menu asset, an object carrying a Modular Avatar menu item, or another TsiYuki menu.
+
 ## [3.0.0] - 2026-09-21
 
 ### Added

@@ -21,6 +21,9 @@ namespace TsiYuki.Wardrobe.Editor
         protected override void Configure()
         {
             InPhase(BuildPhase.Generating)
+                // Core settles menu placement once every TsiYuki tool has run,
+                // so this has to be done by then.
+                .BeforePlugin("moe.tsiyuki.core")
                 .BeforePlugin("nadena.dev.modular-avatar")
                 .Run("Generate wardrobe", Execute);
         }
@@ -86,7 +89,9 @@ namespace TsiYuki.Wardrobe.Editor
             var parameters = host.AddComponent<ModularAvatarParameters>();
             parameters.parameters = BuildParameters(model);
 
-            MenuGenerator.Build(model, host.transform);
+            var menuRoot = MenuGenerator.Build(model, host.transform);
+            MenuPlacement.Place(model.Config, model.Config.menuParent, menuRoot, model.MenuName,
+                (key, args) => Report(ErrorSeverity.NonFatal, key, model.Config, args));
         }
 
         internal static List<ParameterConfig> BuildParameters(WardrobeModel model)

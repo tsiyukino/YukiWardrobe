@@ -162,6 +162,12 @@ namespace TsiYuki.Wardrobe
         // Whether selections persist across worlds and sessions.
         public bool saved = true;
 
+        // Where this menu is installed; null is the avatar's root menu. Takes a
+        // VRCExpressionsMenu asset, an object carrying a Modular Avatar menu
+        // item, or another TsiYuki component that makes a menu. Held loosely so
+        // the runtime assembly needs none of those types.
+        public UnityEngine.Object menuParent;
+
         // Menu order. Values are stable, the order is only presentation.
         public List<WardrobeEntry> entries = new List<WardrobeEntry>();
 
