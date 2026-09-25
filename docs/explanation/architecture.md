@@ -16,6 +16,11 @@ Data lives only in `YukiWardrobe` components (Runtime). Everything else is edito
 | `Editor/WardrobeIcons.cs` | Renders outfit icons from a posed copy in a preview scene. |
 | `Editor/WardrobeActions.cs` | Outfit import (MA Setup Outfit), shrink-blendshape suggestions, toggle-to-piece conversion, parameter budget. |
 
+Code shared with the other TsiYuki tools comes from TsiYuki Core (`TsiYuki.Core.Editor`): localization, the
+common GUI, `UndoEdit`, `AnimatorGraph` (layers, states and entry transitions for the FX controller) and the menu
+placement registry. Core references neither Modular Avatar nor the VRChat SDK, and never references this package.
+See [decisions/2026-09-26_share-by-dependency.md](../decisions/2026-09-26_share-by-dependency.md).
+
 Parameters: `<param>` (int; each entry has a fixed value, 0 = default entry), `<param>/<pieceId>` (bool),
 `<param>/<entryId>/Color` (int), `<param>/Look` (int, local only). `<param>` is `Wardrobe/<wardrobe id>` unless
 set explicitly. Ids and values are assigned by `YukiWardrobe.EnsureIds()` and never derived from names or order.

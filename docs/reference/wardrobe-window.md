@@ -20,5 +20,5 @@ built-in footer button removes the selected row. Validation warnings and paramet
 `WardrobeModel.Resolve`.
 
 The list itself lives in `OutfitListGUI` (internal, one instance bound to one
-component); `UndoEdit` (internal) wraps the record/dirty/prefab-modification
+component); `UndoEdit` (from TsiYuki Core) wraps the record/dirty/prefab-modification
 sequence both classes use.

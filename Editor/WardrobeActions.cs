@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using nadena.dev.modular_avatar.core;
+using TsiYuki.Core.Editor;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;

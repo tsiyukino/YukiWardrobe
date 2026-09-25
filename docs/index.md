@@ -15,3 +15,4 @@
 
 ## Decisions
 - [2026-07-15_component-ndmf-rewrite.md](decisions/2026-07-15_component-ndmf-rewrite.md) — why the tool was rewritten as a component + NDMF plugin.
+- [2026-09-26_share-by-dependency.md](decisions/2026-09-26_share-by-dependency.md) — where code shared with the other TsiYuki tools lives, and why the Modular Avatar parts get their own package.

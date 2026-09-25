@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TsiYuki.Core.Editor;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -66,33 +67,23 @@ namespace TsiYuki.Wardrobe.Editor
 
         static void BuildOutfitLayer(AnimatorController controller, WardrobeModel model, Action<UnityEngine.Object> persist)
         {
-            var sm = AddLayer(controller, model.ParameterName, persist);
+            var sm = AnimatorGraph.AddLayer(controller, model.ParameterName, persist);
             int y = 0;
             foreach (var entry in model.Entries)
             {
                 var clip = BuildOutfitClip(model, entry);
                 persist(clip);
-                var state = AddState(sm, entry.IsNone ? "None" : entry.DisplayName, clip, new Vector3(400, y), persist);
+                var state = AnimatorGraph.AddState(sm, entry.IsNone ? "None" : entry.DisplayName, clip, new Vector3(400, y), persist);
                 y += 60;
 
-                AddEnter(sm, state, entry.Value, model.ParameterName, persist);
+                AnimatorGraph.AddAnyStateTransition(sm, state, model.ParameterName, entry.Value, persist);
                 if (entry.IsDefault)
                 {
                     // 0 (the synced default, and a switched-off toggle) wears the default entry.
                     sm.defaultState = state;
-                    AddEnter(sm, state, 0, model.ParameterName, persist);
+                    AnimatorGraph.AddAnyStateTransition(sm, state, model.ParameterName, 0, persist);
                 }
             }
-        }
-
-        static void AddEnter(AnimatorStateMachine sm, AnimatorState state, int value, string parameter, Action<UnityEngine.Object> persist)
-        {
-            var transition = sm.AddAnyStateTransition(state);
-            transition.canTransitionToSelf = false;
-            transition.hasExitTime = false;
-            transition.duration = 0;
-            transition.AddCondition(AnimatorConditionMode.Equals, value, parameter);
-            persist(transition);
         }
 
         /// <summary>The pose of one outfit (or None when <paramref name="worn"/> is null).</summary>
@@ -130,7 +121,7 @@ namespace TsiYuki.Wardrobe.Editor
 
         static void BuildPieceLayer(AnimatorController controller, WardrobeModel model, List<ResolvedPiece> elements, Action<UnityEngine.Object> persist)
         {
-            var sm = AddLayer(controller, model.ParameterName + "/Pieces", persist);
+            var sm = AnimatorGraph.AddLayer(controller, model.ParameterName + "/Pieces", persist);
 
             var root = new BlendTree
             {
@@ -170,7 +161,7 @@ namespace TsiYuki.Wardrobe.Editor
             }
             root.children = children.ToArray();
 
-            var state = AddState(sm, "Pieces", root, new Vector3(400, 0), persist);
+            var state = AnimatorGraph.AddState(sm, "Pieces", root, new Vector3(400, 0), persist);
             sm.defaultState = state;
         }
 
@@ -178,7 +169,7 @@ namespace TsiYuki.Wardrobe.Editor
 
         static void BuildColorLayer(AnimatorController controller, ResolvedOutfit outfit, Action<UnityEngine.Object> persist)
         {
-            var sm = AddLayer(controller, outfit.ColorParameter, persist);
+            var sm = AnimatorGraph.AddLayer(controller, outfit.ColorParameter, persist);
             int y = 0;
             foreach (var color in outfit.Colors)
             {
@@ -190,10 +181,10 @@ namespace TsiYuki.Wardrobe.Editor
                 }
                 persist(clip);
 
-                var state = AddState(sm, color.DisplayName, clip, new Vector3(400, y), persist);
+                var state = AnimatorGraph.AddState(sm, color.DisplayName, clip, new Vector3(400, y), persist);
                 y += 60;
                 if (color.Index == 0) sm.defaultState = state;
-                AddEnter(sm, state, color.Index, outfit.ColorParameter, persist);
+                AnimatorGraph.AddAnyStateTransition(sm, state, outfit.ColorParameter, color.Index, persist);
             }
         }
 
@@ -201,14 +192,14 @@ namespace TsiYuki.Wardrobe.Editor
 
         static void BuildLookLayer(AnimatorController controller, WardrobeModel model, Action<UnityEngine.Object> persist)
         {
-            var sm = AddLayer(controller, model.LookParameter, persist);
-            var idle = AddState(sm, "Idle", null, new Vector3(400, 0), persist);
+            var sm = AnimatorGraph.AddLayer(controller, model.LookParameter, persist);
+            var idle = AnimatorGraph.AddState(sm, "Idle", null, new Vector3(400, 0), persist);
             sm.defaultState = idle;
 
             int y = 80;
             foreach (var look in model.Looks)
             {
-                var state = AddState(sm, $"Look {look.Value}", null, new Vector3(400, y), persist);
+                var state = AnimatorGraph.AddState(sm, $"Look {look.Value}", null, new Vector3(400, y), persist);
                 y += 60;
 
                 var driver = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
@@ -221,7 +212,7 @@ namespace TsiYuki.Wardrobe.Editor
                     driver.parameters.Add(new VRC_AvatarParameterDriver.Parameter { type = VRC_AvatarParameterDriver.ChangeType.Set, name = parameter, value = on ? 1 : 0 });
                 persist(driver);
 
-                AddEnter(sm, state, look.Value, model.LookParameter, persist);
+                AnimatorGraph.AddAnyStateTransition(sm, state, model.LookParameter, look.Value, persist);
 
                 var back = state.AddTransition(idle);
                 back.hasExitTime = false;
@@ -232,28 +223,6 @@ namespace TsiYuki.Wardrobe.Editor
         }
 
         // ------------------------------------------------------------ helpers
-
-        static AnimatorStateMachine AddLayer(AnimatorController controller, string name, Action<UnityEngine.Object> persist)
-        {
-            var sm = new AnimatorStateMachine { name = name, hideFlags = HideFlags.HideInHierarchy };
-            persist(sm);
-            controller.AddLayer(new AnimatorControllerLayer
-            {
-                name = name,
-                defaultWeight = 1,
-                stateMachine = sm,
-            });
-            return sm;
-        }
-
-        static AnimatorState AddState(AnimatorStateMachine sm, string name, Motion motion, Vector3 position, Action<UnityEngine.Object> persist)
-        {
-            var state = sm.AddState(name, position);
-            state.motion = motion;
-            state.writeDefaultValues = false;
-            persist(state);
-            return state;
-        }
 
         public static void SetActiveCurve(AnimationClip clip, string path, bool active)
         {
