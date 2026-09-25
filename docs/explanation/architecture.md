@@ -17,7 +17,8 @@ Data lives only in `YukiWardrobe` components (Runtime). Everything else is edito
 | `Editor/WardrobeActions.cs` | Outfit import (MA Setup Outfit), shrink-blendshape suggestions, toggle-to-piece conversion, parameter budget. |
 
 Code shared with the other TsiYuki tools comes from TsiYuki Core (`TsiYuki.Core.Editor`): localization, the
-common GUI, `UndoEdit`, `AnimatorGraph` (layers, states and entry transitions for the FX controller) and the menu
+common GUI, `UndoEdit`, `AnimatorGraph` (layers, states and entry transitions for the FX controller),
+`YukiNdmfReport` (build warnings in NDMF's error window, from the same localization tables) and the menu
 placement registry. Core references neither Modular Avatar nor the VRChat SDK, and never references this package.
 See [decisions/2026-09-26_share-by-dependency.md](../decisions/2026-09-26_share-by-dependency.md).
 

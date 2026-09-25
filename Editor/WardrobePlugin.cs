@@ -39,9 +39,9 @@ namespace TsiYuki.Wardrobe.Editor
 
             foreach (var model in set.Models)
                 foreach (var warning in model.Warnings)
-                    Report(ErrorSeverity.NonFatal, warning.Key, warning.Context, warning.Args);
+                    WardrobeText.Errors.Report(ErrorSeverity.NonFatal, warning.Key, warning.Context, warning.Args);
             foreach (var conflict in ConflictChecker.Check(set))
-                Report(ErrorSeverity.Information, conflict.Key, conflict.Objects.FirstOrDefault(), conflict.Args);
+                WardrobeText.Errors.Report(ErrorSeverity.Information, conflict.Key, conflict.Objects.FirstOrDefault(), conflict.Args);
 
             foreach (var model in set.Models)
             {
@@ -59,15 +59,6 @@ namespace TsiYuki.Wardrobe.Editor
 
             foreach (var config in configs)
                 if (config != null) Object.DestroyImmediate(config);
-        }
-
-        static void Report(ErrorSeverity severity, string key, Object context, object[] args)
-        {
-            // Strings fill the message; a trailing Unity object becomes a
-            // clickable reference in NDMF's error window.
-            var all = (args ?? new object[0]).Select(a => (object)(a?.ToString() ?? "")).ToList();
-            if (context != null) all.Add(context);
-            ErrorReport.ReportError(WardrobeText.Ndmf, severity, key, all.ToArray());
         }
 
         static void Generate(BuildContext ctx, WardrobeModel model)
@@ -91,7 +82,7 @@ namespace TsiYuki.Wardrobe.Editor
 
             var menuRoot = MenuGenerator.Build(model, host.transform);
             MenuPlacement.Place(model.Config, model.Config.menuParent, menuRoot, model.MenuName,
-                (key, args) => Report(ErrorSeverity.NonFatal, key, model.Config, args));
+                (key, args) => WardrobeText.Errors.Report(ErrorSeverity.NonFatal, key, model.Config, args));
         }
 
         internal static List<ParameterConfig> BuildParameters(WardrobeModel model)

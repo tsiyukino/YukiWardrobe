@@ -3,8 +3,8 @@
 NDMF plugin (`moe.tsiyuki.wardrobe`), one pass in the Generating phase, which
 runs before Modular Avatar's Transforming-phase passes.
 
-For each `YukiWardrobe` under the avatar root: resolve the model, log its
-warnings, and — when at least one valid outfit exists — attach to the
+For each `YukiWardrobe` under the avatar root: resolve the model, report its
+warnings to NDMF (through `WardrobeText.Errors`, a TsiYuki Core `YukiNdmfReport`), and — when at least one valid outfit exists — attach to the
 component's GameObject:
 
 - `ModularAvatarMergeAnimator` — the built FX controller, FX layer, absolute

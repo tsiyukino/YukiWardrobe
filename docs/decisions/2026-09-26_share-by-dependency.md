@@ -35,4 +35,7 @@ testable on its own, and every tool orders its pass against the plugin name
 Done in three steps so each is checked against the generated output before
 the next: (1) `UndoEdit` and `AnimatorGraph`; (2) the NDMF report helper;
 (3) the Modular Avatar package. Step 1 left every generated FX controller
-identical.
+identical. Step 2 turned out to hold a third copy of the localization file
+parser, one per tool's NDMF adapter; `YukiNdmfReport` reads the tables
+`YukiLocalizer` already has instead, and every message in every language came
+out the same.

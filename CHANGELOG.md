@@ -6,6 +6,7 @@
 - Undo-safe editing and the FX controller's layers, states and entry transitions now come from TsiYuki Core
   0.4.0 instead of this package's own copies. The generated controller is the same. Requires TsiYuki Core
   0.4.0.
+- Build warnings are reported to NDMF through TsiYuki Core's `YukiNdmfReport`. The messages are unchanged.
 
 ## [3.1.0] - 2026-09-22
 
