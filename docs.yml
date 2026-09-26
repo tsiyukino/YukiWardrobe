@@ -12,10 +12,11 @@ docs: docs/
 tests:
   command: none
   note: >
-    Compiles only inside a Unity 2022.3 project with the VRChat Avatars SDK,
-    NDMF (>=1.6), and Modular Avatar (>=1.10) installed. Tests would run there
-    via the Unity Test Framework; none exist yet.
+    Compiles only inside a Unity 2022.3 project with the VRChat Avatars SDK
+    (>=3.7), NDMF (>=1.11), Modular Avatar (>=1.12) and the TsiYuki Core,
+    Core Animation and Core Menus packages installed. This package has no
+    tests of its own; the shared helpers it builds with are tested in the
+    TsiYuki Core packages, and changes are checked by comparing the
+    generated menu, parameters and FX controller of real avatars.
 conventions:
-  runtime-deps: [VRChat Avatars SDK 3, NDMF, Modular Avatar]
-legacy:
-  - Wardrobe.cs (superseded, pending manual deletion)
+  runtime-deps: [VRChat Avatars SDK 3, NDMF, Modular Avatar, TsiYuki Core, TsiYuki Core Animation, TsiYuki Core Menus]

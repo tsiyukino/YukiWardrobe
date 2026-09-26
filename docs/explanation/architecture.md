@@ -1,4 +1,4 @@
-# Architecture (3.0)
+# Architecture (3.1)
 
 Data lives only in `YukiWardrobe` components (Runtime). Everything else is editor code.
 
@@ -12,6 +12,9 @@ Data lives only in `YukiWardrobe` components (Runtime). Everything else is edito
 | `Editor/WardrobePlugin.cs` | NDMF plugin (Generating, before MA): reports warnings/conflicts to NDMF, hides menus set to Hide, removes platform-excluded outfits, emits Merge Animator + Parameters + menu, removes the configs. Also the NDMF parameter provider. |
 | `Editor/ConflictChecker.cs` | Objects / blendshapes also controlled by other wardrobes, MA Object Toggle, MA Shape Changer or animators. |
 | `Editor/WardrobeWindow.cs` | Two-pane editor. Holds no data; all edits go through Undo. |
+| `Editor/YukiWardrobeEditor.cs` | The component's inspector: a summary and a button to the window, which survives Hierarchy selection changes. |
+| `Editor/WardrobeMenu.cs` | Hierarchy right-click **GameObject > TsiYuki > Add to Wardrobe**, applied once to the whole selection. |
+| `Editor/WardrobeText.cs` | UI strings (`Localization/<code>.txt`) and `WardrobeText.Errors` for NDMF; `MenuText`, the always-English labels the menu adds. |
 | `Editor/WardrobePreview.cs` | Try-on through AnimationMode property modifications (reverted on stop, never saved). |
 | `Editor/WardrobeIcons.cs` | Renders outfit icons from a posed copy in a preview scene. |
 | `Editor/WardrobeActions.cs` | Outfit import (MA Setup Outfit), shrink-blendshape suggestions, toggle-to-piece conversion, parameter budget. |
