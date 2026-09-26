@@ -1,7 +1,7 @@
 {
   "name": "moe.tsiyuki.wardrobe",
   "displayName": "Yuki Wardrobe",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "unity": "2022.3",
   "description": "Outfit and hair switcher for VRChat avatars: exclusive outfits with piece toggles, colors and looks, absorbs outfit menus, generated non-destructively at build time through NDMF and Modular Avatar.",
   "author": {

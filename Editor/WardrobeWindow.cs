@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using TsiYuki.Core.Editor;
+using TsiYuki.Core.Menus.Editor;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -450,6 +451,7 @@ namespace TsiYuki.Wardrobe.Editor
             if (string.IsNullOrWhiteSpace(config.parameterName) && model != null)
                 EditorGUILayout.LabelField(" ", L.Tr("ui.parameter_auto", model.ParameterName), EditorStyles.miniLabel);
             var saved = EditorGUILayout.Toggle(new GUIContent(L["ui.saved"], L["ui.saved.tip"]), config.saved);
+            var menuParent = MenuParentField.Draw(config.menuParent);
 
             var entries = config.entries.Where(e => e != null && (e.kind == EntryKind.None || e.root != null)).ToList();
             var names = entries.Select(EntryName).ToArray();
@@ -472,6 +474,7 @@ namespace TsiYuki.Wardrobe.Editor
                 config.icon = menuIcon;
                 config.parameterName = parameter;
                 config.saved = saved;
+                config.menuParent = menuParent;
                 if (defaultIndex >= 0 && defaultIndex < entries.Count) config.defaultEntry = entries[defaultIndex].id;
                 config.changeEffect = effect;
                 config.changeEffectDuration = duration;

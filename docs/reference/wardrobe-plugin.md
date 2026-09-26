@@ -1,7 +1,7 @@
 # WardrobePlugin (Editor/WardrobePlugin.cs)
 
 NDMF plugin `moe.tsiyuki.wardrobe`, one pass ("Generate wardrobe") in the
-Generating phase, ordered before `moe.tsiyuki.core.menus` (which settles menus
+Generating phase, ordered before TsiYuki Core Menus (`.BeforePlugin<MenusPlugin>()`, which settles menus
 installed into other TsiYuki menus) and before Modular Avatar.
 
 For an avatar with at least one `YukiWardrobe`:

@@ -1,6 +1,16 @@
 # Changelog
 
-## [3.1.1] - 2026-09-26
+## [3.2.0] - 2026-09-26
+
+### Added
+- **Install into** in the wardrobe settings. 3.1.0 added the setting and the build honoured it, but the window
+  had no field for it.
+
+### Fixed
+- **Install into** another TsiYuki menu now works whether it holds that menu's component or the object carrying
+  it, which is what dragging it from the Hierarchy gives. Before, the object was never understood, and the
+  component only when its tool ran after this one: Yuki Material runs first and removes its component, so a
+  wardrobe pointed at a Material menu stayed in the root menu without a word.
 
 ### Changed
 - Undo-safe editing and the FX controller's layers, states and entry transitions now come from TsiYuki Core

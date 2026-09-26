@@ -127,5 +127,3 @@ ui.col.object = オブジェクト
 ui.col.name = メニュー表示名
 ui.col.icon = アイコン
 ui.col.default = 初期
-ui.menu_parent = 追加先メニュー
-ui.menu_parent.tip = このワードローブのメニューが表示される場所。空ならアバターのルートメニュー。メニューアセット、Modular Avatar のメニューアイテムを持つオブジェクト、または他の TsiYuki メニューを指定できます。

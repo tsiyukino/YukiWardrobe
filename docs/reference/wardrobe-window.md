@@ -1,24 +1,24 @@
 # WardrobeWindow (Editor/WardrobeWindow.cs)
 
-Dockable editing UI (`TsiYuki/Wardrobe Editor` menu item). A view over the
-`YukiWardrobe` component: it stores no wardrobe data itself; every edit goes
-to the component through `Undo`, followed by dirty/prefab-modification
-marking.
+Dockable editing window (**TsiYuki > Wardrobe Editor**) over the `YukiWardrobe` components of one avatar. It
+holds no wardrobe data: every edit goes straight to a component through `UndoEdit` (TsiYuki Core), so the window
+can be closed at any time without losing anything.
 
 - `static void ShowWindow()` — opens the window.
-- `static void Open(YukiWardrobe config)` — opens it pointed at the config's
-  avatar (used by the inspector button).
+- `static void Open(YukiWardrobe config)` — opens it on that component (used by the inspector button).
 
-Features: avatar picker (auto-picks a lone scene avatar), one-click creation
-of a "Wardrobe" child object when the avatar has none, "add selected as
-outfits" with a category field, and a drag-reorderable outfit list — the top
-row is the default (there is no separate default setting), each row expands
-to per-piece checkboxes, a blendshape-override list (renderer, name popup
-read from the mesh, 0–100 slider), and an object-override list (objects
-outside the outfit with an On/Off button for their state while worn); the
-built-in footer button removes the selected row. Validation warnings and parameter-bit usage come from
-`WardrobeModel.Resolve`.
+Layout:
 
-The list itself lives in `OutfitListGUI` (internal, one instance bound to one
-component); `UndoEdit` (from TsiYuki Core) wraps the record/dirty/prefab-modification
-sequence both classes use.
+- **Top:** one tab per wardrobe on the avatar, and a button to add another.
+- **Left:** **Wardrobe settings**, the list of entries (outfits, and None when enabled) in menu order,
+  reorderable by dragging, and a drop area that adds objects as outfits. The avatar's parameter budget is shown
+  underneath.
+- **Right, wardrobe settings:** object name, menu name, icon, parameter name (with the name that will be used
+  when left empty), **Saved**, **Install into** (TsiYuki Core Menus' `MenuParentField`; empty is the avatar's
+  root menu), the default entry, the change effect object and its duration, and a summary of outfits, pieces,
+  looks and parameter bits.
+- **Right, an entry:** try-on preview, icon rendering, making it the default and removing it, then tabs for its
+  general settings, pieces, blendshape overrides, object overrides and the menus shipped inside the outfit.
+
+Validation warnings, conflicts and parameter usage come from `WardrobeModel`/`WardrobeSet` and
+`ConflictChecker`.

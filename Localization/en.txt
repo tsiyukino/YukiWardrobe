@@ -127,5 +127,3 @@ ui.col.object = Object
 ui.col.name = Menu name
 ui.col.icon = Icon
 ui.col.default = Default
-ui.menu_parent = Install into
-ui.menu_parent.tip = Which menu this wardrobe appears in. Empty is the avatar's root menu. Takes a menu asset, an object with a Modular Avatar menu item, or another TsiYuki menu.

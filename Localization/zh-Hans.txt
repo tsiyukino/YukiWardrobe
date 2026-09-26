@@ -127,5 +127,3 @@ ui.col.object = 物体
 ui.col.name = 菜单显示名
 ui.col.icon = 图标
 ui.col.default = 默认
-ui.menu_parent = 装进菜单
-ui.menu_parent.tip = 这个衣柜菜单出现在哪里。留空 = 模型根菜单。可以填菜单资产、带 Modular Avatar 菜单项的物体，或另一个 TsiYuki 菜单。
