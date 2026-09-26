@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using nadena.dev.modular_avatar.core;
 using nadena.dev.ndmf;
+using TsiYuki.Core.Menus.Editor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 
@@ -23,7 +24,7 @@ namespace TsiYuki.Wardrobe.Editor
             InPhase(BuildPhase.Generating)
                 // Core settles menu placement once every TsiYuki tool has run,
                 // so this has to be done by then.
-                .BeforePlugin("moe.tsiyuki.core")
+                .BeforePlugin("moe.tsiyuki.core.menus")
                 .BeforePlugin("nadena.dev.modular-avatar")
                 .Run("Generate wardrobe", Execute);
         }
@@ -81,8 +82,7 @@ namespace TsiYuki.Wardrobe.Editor
             parameters.parameters = BuildParameters(model);
 
             var menuRoot = MenuGenerator.Build(model, host.transform);
-            MenuPlacement.Place(model.Config, model.Config.menuParent, menuRoot, model.MenuName,
-                (key, args) => WardrobeText.Errors.Report(ErrorSeverity.NonFatal, key, model.Config, args));
+            MenuPlacement.Place(model.Config, model.Config.menuParent, menuRoot, model.MenuName);
         }
 
         internal static List<ParameterConfig> BuildParameters(WardrobeModel model)

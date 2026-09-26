@@ -7,6 +7,9 @@
   0.4.0 instead of this package's own copies. The generated controller is the same. Requires TsiYuki Core
   0.4.0.
 - Build warnings are reported to NDMF through TsiYuki Core's `YukiNdmfReport`. The messages are unchanged.
+- The FX controller's layers, states and entry transitions come from TsiYuki Core Animation, and the menu's
+  items and its placement (**Install into**) from TsiYuki Core Menus. The generated menu and controller are
+  unchanged. The three placement warnings are now TsiYuki Core Menus' own.
 
 ## [3.1.0] - 2026-09-22
 

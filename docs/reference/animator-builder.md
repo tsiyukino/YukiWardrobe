@@ -7,8 +7,8 @@ Builds the wardrobe FX controller in memory.
   (controller, state machines, states, transitions, clips) so the caller can
   register them with an asset container.
 
-Layers, states and the Any State entry transitions are made with TsiYuki Core's
-`AnimatorGraph`, which Yuki Material uses too. A state is handed to `persist`
+Layers, states and the Any State entry transitions are made with TsiYuki Core
+Animation's `AnimatorGraph`, which Yuki Material uses too. A state is handed to `persist`
 before it is attached to its state machine; a repeated state name gets a
 suffix, as in the Animator window.
 
